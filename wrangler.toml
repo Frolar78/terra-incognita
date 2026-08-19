@@ -1,0 +1,17 @@
+# Facultatif : uniquement si tu déploies en ligne de commande avec Wrangler.
+# Le README décrit la voie simple, 100 % via le tableau de bord Cloudflare.
+
+name = "terra-incognita"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Variables NON secrètes (les secrets se saisissent dans le dashboard
+# ou via `wrangler secret put`)
+STRAVA_CLIENT_ID = "à_remplir"
+ATHLETE_ID = "à_remplir"
+ALLOWED_ORIGIN = "https://TON-PSEUDO.github.io"
+
+# Secrets à créer séparément (jamais dans ce fichier) :
+#   wrangler secret put STRAVA_CLIENT_SECRET
+#   wrangler secret put ANTHROPIC_API_KEY

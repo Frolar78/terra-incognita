@@ -1,0 +1,147 @@
+/* ============================================================
+   TERRA INCOGNITA — thème
+   Palette : parchemin vieilli, encre brune, or patiné,
+   sang séché, brume gris-violet. Aucune couleur moderne.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('../assets/fonts/cinzel.woff2') format('woff2');
+  font-weight: 400 900; font-display: swap;
+}
+@font-face {
+  font-family: 'IM Fell English SC';
+  src: url('../assets/fonts/imfell.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../assets/fonts/garamond.woff2') format('woff2');
+  font-weight: 400 800; font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../assets/fonts/garamondit.woff2') format('woff2');
+  font-weight: 400 800; font-style: italic; font-display: swap;
+}
+
+:root {
+  --parchemin: #EAE0C6;
+  --parchemin-ombre: #D3C29E;
+  --sepia: #8B7355;
+  --encre: #3B2F23;
+  --encre-pale: #6E5F4B;
+  --or: #B8934A;
+  --or-vif: #E3B341;
+  --sang: #7A2E2B;
+  --brume: #2B2733;
+  --brume-claire: #5A5168;
+  --titre: 'Cinzel', serif;
+  --etiquette: 'IM Fell English SC', serif;
+  --texte: 'EB Garamond', serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--brume);
+  font-family: var(--texte);
+  color: var(--encre);
+  font-size: 17px;
+}
+
+h1, h2, h3 { font-family: var(--titre); font-weight: 700; letter-spacing: .06em; margin: 0; }
+.hidden { display: none !important; }
+
+/* --- Cadre ouvragé : double filet or + coins ornementés ------ */
+.ornate {
+  position: relative;
+  background:
+    linear-gradient(rgba(234,224,198,.96), rgba(211,194,158,.96)),
+    url('../assets/textures/parchemin.png');
+  background-size: auto, 512px;
+  border: 1.5px solid var(--or);
+  box-shadow:
+    inset 0 0 0 3.5px rgba(234,224,198,.9),
+    inset 0 0 0 5px var(--or),
+    inset 0 0 26px rgba(59,47,35,.28),
+    0 10px 28px rgba(20,16,12,.55);
+}
+.ornate::before, .ornate::after {
+  content: ''; position: absolute; width: 26px; height: 26px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cg fill='none' stroke='%23B8934A' stroke-width='1.6'%3E%3Cpath d='M2 24 V8 Q2 2 8 2 H24'/%3E%3Cpath d='M6 24 V10 Q6 6 10 6 H24' stroke-width='1'/%3E%3Ccircle cx='6' cy='6' r='2' fill='%23B8934A' stroke='none'/%3E%3C/g%3E%3C/svg%3E") no-repeat;
+  pointer-events: none;
+}
+.ornate::before { top: -1px; left: -1px; }
+.ornate::after { top: -1px; right: -1px; transform: scaleX(-1); }
+.ornate .coin-bas::before, .ornate .coin-bas::after {
+  content: ''; position: absolute; width: 26px; height: 26px;
+  background: inherit;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cg fill='none' stroke='%23B8934A' stroke-width='1.6'%3E%3Cpath d='M2 24 V8 Q2 2 8 2 H24'/%3E%3Cpath d='M6 24 V10 Q6 6 10 6 H24' stroke-width='1'/%3E%3Ccircle cx='6' cy='6' r='2' fill='%23B8934A' stroke='none'/%3E%3C/g%3E%3C/svg%3E") no-repeat;
+  pointer-events: none;
+}
+.ornate .coin-bas::before { bottom: -1px; left: -1px; transform: scaleY(-1); }
+.ornate .coin-bas::after { bottom: -1px; right: -1px; transform: scale(-1, -1); }
+
+/* --- Boutons -------------------------------------------------- */
+.btn {
+  font-family: var(--etiquette);
+  font-size: 1.05rem;
+  letter-spacing: .05em;
+  color: var(--parchemin);
+  background: linear-gradient(#5a4632, #3B2F23);
+  border: 1px solid var(--or);
+  box-shadow: inset 0 0 0 2px rgba(234,224,198,.15), 0 3px 10px rgba(20,16,12,.5);
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: filter .15s, transform .05s;
+}
+.btn:hover { filter: brightness(1.15); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--or-vif); outline-offset: 2px; }
+.btn.secondaire { background: linear-gradient(#EAE0C6, #D3C29E); color: var(--encre); }
+.btn.danger { border-color: var(--sang); }
+
+/* --- Séparateur enluminé -------------------------------------- */
+.filet {
+  border: 0; height: 14px; margin: 14px 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14'%3E%3Cg fill='none' stroke='%23B8934A' stroke-width='1'%3E%3Cpath d='M0 7 H86 M114 7 H200'/%3E%3Cpath d='M100 2 l5 5 -5 5 -5 -5 Z' fill='%23B8934A' stroke='none'/%3E%3Ccircle cx='90' cy='7' r='1.4' fill='%23B8934A' stroke='none'/%3E%3Ccircle cx='110' cy='7' r='1.4' fill='%23B8934A' stroke='none'/%3E%3C/g%3E%3C/svg%3E") center / 200px 14px no-repeat;
+}
+
+/* --- Toast ---------------------------------------------------- */
+#toast {
+  position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px);
+  max-width: min(92vw, 460px);
+  background: rgba(43,39,51,.94);
+  color: var(--parchemin);
+  border: 1px solid var(--or);
+  padding: 10px 16px;
+  font-size: .95rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s, transform .3s;
+  z-index: 60;
+  text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* --- Barres de progression ------------------------------------ */
+.jauge {
+  position: relative;
+  height: 11px;
+  background: rgba(46,36,26,.5);
+  border: 1px solid var(--or);
+  box-shadow: inset 0 1px 3px rgba(15,11,8,.7);
+  overflow: hidden;
+}
+.jauge > div {
+  height: 100%; width: 0;
+  background: linear-gradient(180deg, #E9C86B, #B8934A 55%, #9a7a3c);
+  box-shadow: 0 0 9px rgba(227,179,65,.55), inset 0 1px 0 rgba(255,240,200,.5);
+  transition: width .6s ease;
+}
+.jauge > i {
+  position: absolute; inset: 0; display: block; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 1px), rgba(46,36,26,.55) calc(10% - 1px) 10%);
+}
