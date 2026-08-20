@@ -15,7 +15,7 @@ function cors(env, origin) {
     'Access-Control-Allow-Origin': ok ? origin : allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json; charset=utf-8',
   };
 }
 
@@ -31,7 +31,10 @@ export default {
     if (request.method === 'OPTIONS')
       return new Response(null, { status: 204, headers });
     if (request.method !== 'POST')
-      return json({ error: 'Méthode non autorisée' }, 405, headers);
+      return json({
+        error: 'Méthode non autorisée',
+        origine_autorisee: env.ALLOWED_ORIGIN || '(ALLOWED_ORIGIN absente de la version déployée)',
+      }, 405, headers);
 
     // ------------------------------------------------------ //
     if (url.pathname === '/strava/token') {
@@ -101,7 +104,7 @@ export default {
         headers: {
           'x-api-key': env.ANTHROPIC_API_KEY,
           'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
