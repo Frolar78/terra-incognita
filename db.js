@@ -9,7 +9,7 @@
 // ============================================================
 (function () {
   const DB_NAME = 'terra-incognita';
-  const DB_VER = 1;
+  const DB_VER = 2;
   let db = null;
 
   function open() {
@@ -25,6 +25,10 @@
           d.createObjectStore('journal', { keyPath: 'id', autoIncrement: true });
         if (!d.objectStoreNames.contains('meta'))
           d.createObjectStore('meta', { keyPath: 'key' });
+        if (!d.objectStoreNames.contains('pois'))
+          d.createObjectStore('pois', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('poitiles'))
+          d.createObjectStore('poitiles', { keyPath: 'key' });
       };
       rq.onsuccess = () => { db = rq.result; res(db); };
       rq.onerror = () => rej(rq.error);
@@ -93,14 +97,14 @@
 
     // --- Export / import JSON --------------------------------
     async exportAll() {
-      const [cells, activities, journal, meta] = await Promise.all([
+      const [cells, activities, journal, meta, pois] = await Promise.all([
         DB.getAll('cells'), DB.getAll('activities'),
-        DB.getAll('journal'), DB.getAll('meta'),
+        DB.getAll('journal'), DB.getAll('meta'), DB.getAll('pois'),
       ]);
       const m = meta.filter((x) => !/token/i.test(x.key)); // jamais de secrets dans l'export
-      return { app: 'terra-incognita', version: 1,
+      return { app: 'terra-incognita', version: 2,
         exportDate: new Date().toISOString(),
-        cells, activities, journal, meta: m };
+        cells, activities, journal, meta: m, pois };
     },
 
     async importAll(data) {
@@ -108,6 +112,7 @@
       await DB.bulkPut('cells', data.cells || []);
       await DB.bulkPut('activities', data.activities || []);
       await DB.bulkPut('meta', data.meta || []);
+      await DB.bulkPut('pois', data.pois || []);
       for (const j of (data.journal || [])) { delete j.id; await DB.add('journal', j); }
     },
   };

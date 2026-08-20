@@ -1,0 +1,248 @@
+// ============================================================
+// poi.js — hauts lieux du royaume (Lot 2)
+// 1. Repérage : requêtes Overpass par tuiles (~10 km) le long des
+//    corridors d'activités, cache définitif par tuile (les
+//    forteresses ne déménagent pas).
+// 2. Classification : tags OSM -> types médiévaux.
+// 3. Découverte : trace passée à moins de DISCOVER_M du lieu.
+// 4. Rareté : wikidata / nb de langues Wikipédia / patrimoine /
+//    altitude -> Commun … Légendaire, avec XP à la clé.
+// ============================================================
+(function () {
+  const DB = window.TI.DB;
+
+  const DISCOVER_M = 150;          // distance de découverte (m)
+  const TILE_DEG = 0.09;           // ~10 km en latitude
+  const THROTTLE_MS = 1100;        // politesse Overpass : 1 requête/s max
+  const ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ];
+
+  const TYPES = {
+    forteresse: { nom: 'Forteresse',   glyphe: '♜' },
+    tour:       { nom: 'Tour de guet', glyphe: '♖' },
+    sanctuaire: { nom: 'Sanctuaire',   glyphe: '✠' },
+    vestiges:   { nom: 'Vestiges',     glyphe: '⚱\uFE0E' },
+    cime:       { nom: 'Cime',         glyphe: '▲' },
+    caverne:    { nom: 'Caverne',      glyphe: '∩' },
+    fanal:      { nom: 'Fanal',        glyphe: '☼\uFE0E' },
+    cascade:    { nom: 'Cascade',      glyphe: '≋' },
+  };
+  const RARETES = ['Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'];
+  const RARETE_XP = [20, 40, 80, 150, 300];
+
+  // ----------------------------------------------------------
+  // Classification tags OSM -> type médiéval (null = sans intérêt)
+  function classify(t) {
+    if (!t || !t.name) return null;
+    const h = t.historic || '';
+    if (/^(castle|fort|citywalls|city_gate|manor)$/.test(h)) return 'forteresse';
+    if (h === 'tower') return 'tour';
+    if (t.man_made === 'tower' &&
+        /^(observation|watchtower|defensive)$/.test(t['tower:type'] || '')) return 'tour';
+    if (/^(ruins|archaeological_site)$/.test(h)) return 'vestiges';
+    if (/^(monastery|abbey|wayside_shrine|chapel|church|hermitage)$/.test(h)) return 'sanctuaire';
+    if (t.amenity === 'place_of_worship') return 'sanctuaire';
+    if (/^(church|chapel|cathedral|basilica)$/.test(t.building || '')) return 'sanctuaire';
+    if (/^(peak|volcano)$/.test(t.natural || '')) return 'cime';
+    if (t.natural === 'cave_entrance') return 'caverne';
+    if (t.man_made === 'lighthouse') return 'fanal';
+    if (t.waterway === 'waterfall') return 'cascade';
+    return null;
+  }
+
+  // ----------------------------------------------------------
+  // Tuiles couvrant une trace (avec marge d'une tuile près des bords)
+  function tileOf(lat, lng) {
+    return Math.floor(lat / TILE_DEG) + '_' + Math.floor(lng / TILE_DEG);
+  }
+  function tilesForTrace(pts) {
+    const m = DISCOVER_M / 111000; // marge en degrés
+    const set = new Set();
+    for (const p of pts) {
+      set.add(tileOf(p[0], p[1]));
+      set.add(tileOf(p[0] + m, p[1])); set.add(tileOf(p[0] - m, p[1]));
+      set.add(tileOf(p[0], p[1] + m)); set.add(tileOf(p[0], p[1] - m));
+    }
+    return set;
+  }
+
+  // ----------------------------------------------------------
+  // Overpass : une tuile = une requête, cache définitif en base
+  let lastCall = 0;
+  async function fetchTile(key) {
+    const cached = await DB.get('poitiles', key);
+    if (cached) return cached.pois;
+
+    const [ty, tx] = key.split('_').map(Number);
+    const S = (ty * TILE_DEG).toFixed(5), N = ((ty + 1) * TILE_DEG).toFixed(5);
+    const W = (tx * TILE_DEG).toFixed(5), E = ((tx + 1) * TILE_DEG).toFixed(5);
+    const bb = `(${S},${W},${N},${E})`;
+    const q = `[out:json][timeout:25];(
+      nwr["historic"~"^(castle|fort|tower|ruins|archaeological_site|monastery|abbey|city_gate|citywalls|wayside_shrine|chapel|church|manor|hermitage)$"]["name"]${bb};
+      nwr["man_made"="lighthouse"]["name"]${bb};
+      nwr["man_made"="tower"]["tower:type"~"^(observation|watchtower|defensive)$"]["name"]${bb};
+      node["natural"~"^(peak|volcano)$"]["name"]${bb};
+      node["natural"="cave_entrance"]["name"]${bb};
+      nwr["building"~"^(church|chapel|cathedral|basilica)$"]["name"]${bb};
+      nwr["amenity"="place_of_worship"]["name"]${bb};
+      nwr["waterway"="waterfall"]["name"]${bb};
+    );out center tags;`;
+
+    // Politesse : jamais plus d'une requête par seconde
+    const wait = lastCall + THROTTLE_MS - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastCall = Date.now();
+
+    let data = null, lastErr = null;
+    for (const ep of ENDPOINTS) {
+      try {
+        const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        if (r.status === 429 || r.status === 504) { lastErr = new Error('Overpass saturé'); continue; }
+        if (!r.ok) { lastErr = new Error('Overpass HTTP ' + r.status); continue; }
+        data = await r.json(); break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!data) throw lastErr || new Error('Overpass injoignable');
+
+    const pois = [];
+    const seen = new Set();
+    for (const el of data.elements || []) {
+      const t = el.tags || {};
+      const type = classify(t);
+      if (!type) continue;
+      const id = el.type + '/' + el.id;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+      const lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+      if (lat == null) continue;
+      pois.push({
+        id, type, name: t.name, lat, lng,
+        ele: t.ele ? parseFloat(t.ele) : null,
+        wikidata: t.wikidata || null,
+        wikipedia: t.wikipedia || null,
+        heritage: !!(t.heritage || t['ref:mhs'] || t['mhs:inscription_date']),
+        commune: t['addr:city'] || null,
+      });
+    }
+    await DB.put('poitiles', { key, ts: Date.now(), pois });
+    return pois;
+  }
+
+  // ----------------------------------------------------------
+  // Distance (m) d'un point à un segment, approx. équirectangulaire
+  function distPointSeg(la, lo, la1, lo1, la2, lo2) {
+    const kx = 111320 * Math.cos(la * Math.PI / 180), ky = 110540;
+    const x = (lo - lo1) * kx, y = (la - la1) * ky;
+    const dx = (lo2 - lo1) * kx, dy = (la2 - la1) * ky;
+    const l2 = dx * dx + dy * dy;
+    let t = l2 ? (x * dx + y * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const ex = x - t * dx, ey = y - t * dy;
+    return Math.sqrt(ex * ex + ey * ey);
+  }
+  function nearTrace(poi, pts) {
+    // Préfiltre grossier puis distance exacte aux segments proches
+    const m = (DISCOVER_M + 60) / 111000;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (Math.max(a[0], b[0]) < poi.lat - m || Math.min(a[0], b[0]) > poi.lat + m ||
+          Math.max(a[1], b[1]) < poi.lng - m * 2 || Math.min(a[1], b[1]) > poi.lng + m * 2) continue;
+      if (distPointSeg(poi.lat, poi.lng, a[0], a[1], b[0], b[1]) <= DISCOVER_M) return true;
+    }
+    return false;
+  }
+
+  // ----------------------------------------------------------
+  // Rareté : wikidata +1, patrimoine +1, langues Wikipédia (≥8 +1,
+  // ≥25 +1), altitude (≥1200 +1, ≥2200 +1) — plafonné à Légendaire.
+  async function sitelinksCounts(qids) {
+    const out = {};
+    for (let i = 0; i < qids.length; i += 50) {
+      const lot = qids.slice(i, i + 50);
+      try {
+        const r = await fetch('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*' +
+          '&props=sitelinks&ids=' + lot.join('|'));
+        const j = await r.json();
+        for (const q of lot) {
+          const e = j.entities && j.entities[q];
+          const sl = e && e.sitelinks ? e.sitelinks : {};
+          const langs = Object.keys(sl).filter((k) => k.endsWith('wiki'));
+          out[q] = { n: langs.length, fr: sl.frwiki ? sl.frwiki.title : null,
+                     en: sl.enwiki ? sl.enwiki.title : null };
+        }
+      } catch (e) { /* la rareté restera calculée sans les langues */ }
+    }
+    return out;
+  }
+  function rarete(poi, langues) {
+    let s = 0;
+    if (poi.wikidata) s++;
+    if (poi.heritage) s++;
+    if (langues >= 8) s++;
+    if (langues >= 25) s++;
+    if (poi.ele != null && poi.ele >= 1200) s++;
+    if (poi.ele != null && poi.ele >= 2200) s++;
+    return Math.min(4, s);
+  }
+
+  // ----------------------------------------------------------
+  // Balayage : activités jamais passées au crible des hauts lieux
+  let scanning = false;
+  async function scanPending(onMsg) {
+    if (scanning) return [];
+    scanning = true;
+    const say = onMsg || (() => {});
+    try {
+      const acts = (await DB.getAll('activities')).filter((a) => !a.poiScanned && a.poly);
+      if (!acts.length) return [];
+      const P = window.TI.Progress, Strava = window.TI.Strava;
+      const known = new Set(await DB.getAllKeys('pois'));
+      const found = [];
+
+      for (let i = 0; i < acts.length; i++) {
+        const a = acts[i];
+        const pts = Strava.decodePolyline(a.poly);
+        if (pts.length >= 2) {
+          const tiles = tilesForTrace(pts);
+          let done = 0;
+          for (const key of tiles) {
+            say(`Repérage des hauts lieux — sortie ${i + 1}/${acts.length}, secteur ${++done}/${tiles.size}…`);
+            let pois;
+            try { pois = await fetchTile(key); }
+            catch (e) { throw Object.assign(e, { resumable: true }); }
+            for (const poi of pois) {
+              if (known.has(poi.id)) continue;
+              if (!nearTrace(poi, pts)) continue;
+              known.add(poi.id);
+              found.push(Object.assign({}, poi, { act: a.id, foundDate: a.date }));
+            }
+          }
+        }
+        a.poiScanned = true;
+        await DB.put('activities', a); // reprise possible à tout moment
+      }
+
+      // Rareté (un seul appel Wikidata groupé pour tout le butin)
+      const qids = found.filter((p) => p.wikidata).map((p) => p.wikidata);
+      const links = qids.length ? await sitelinksCounts(qids) : {};
+      for (const p of found) {
+        const l = p.wikidata && links[p.wikidata] ? links[p.wikidata] : null;
+        if (l && !p.wikipedia) p.wikipedia = l.fr ? 'fr:' + l.fr : (l.en ? 'en:' + l.en : null);
+        p.rarete = rarete(p, l ? l.n : 0);
+        p.xp = RARETE_XP[p.rarete];
+        const d = P.deptOfPoint(p.lat, p.lng);
+        p.dept = d ? d.code : null;
+        p.deptNom = d ? d.nom : null;
+        p.lore = null; p.loreSrc = null; p.fait = null;
+        await DB.put('pois', p);
+      }
+      return found;
+    } finally { scanning = false; }
+  }
+
+  window.TI.POI = { TYPES, RARETES, RARETE_XP, DISCOVER_M, scanPending };
+})();

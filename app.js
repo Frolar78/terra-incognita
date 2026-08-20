@@ -91,6 +91,8 @@
     }
     const acts = await DB.getAll('activities');
     xpTotal = acts.reduce((s, a) => s + (a.xp || 0), 0);
+    const pois = await DB.getAll('pois');
+    xpTotal += pois.reduce((s, p) => s + (p.xp || 0), 0);
     return acts;
   }
 
@@ -226,6 +228,9 @@
         if (d) UI.showDeptPanel(d);
       });
 
+      window.TI.Codex.init(map);
+      await window.TI.Codex.refresh();
+
       wireSettings();
 
       // Première visite : lancer l'import de tout l'historique
@@ -233,6 +238,9 @@
       if (first) {
         UI.toast('Première expédition : import de tout ton historique Strava…', 6000);
         sync();
+      } else {
+        // Lot 2 : repérer les hauts lieux des sorties déjà importées
+        runPoiScan();
       }
     });
 
@@ -265,6 +273,46 @@
   // ==========================================================
   // Synchronisation Strava
   // ==========================================================
+  // ==========================================================
+  // Lot 2 — repérage des hauts lieux le long des sorties
+  // ==========================================================
+  let poiScanRunning = false;
+  async function runPoiScan() {
+    if (poiScanRunning) return;
+    poiScanRunning = true;
+    try {
+      const found = await window.TI.POI.scanPending((msg) => UI.syncBanner(msg));
+      UI.syncBanner(null);
+      if (found.length) {
+        const R = window.TI.POI.RARETES, T = window.TI.POI.TYPES;
+        let xpPoi = 0;
+        for (const p of found.sort((a, b) => a.rarete - b.rarete)) {
+          xpPoi += p.xp;
+          await journal('poi', `✦ Lieu découvert : « ${p.name} » — ` +
+            `${T[p.type].nom}, ${R[p.rarete]}, +${p.xp} XP.`);
+        }
+        xpTotal += xpPoi;
+        UI.updateHUD(xpTotal);
+        UI.renderJournal(await DB.getAll('journal'));
+        await window.TI.Codex.refresh();
+        const rares = found.filter((p) => p.rarete >= 2).length;
+        UI.toast(`${found.length} haut${found.length > 1 ? 's' : ''} lieu${found.length > 1 ? 'x' : ''} ` +
+          `ajouté${found.length > 1 ? 's' : ''} au Codex` +
+          (rares ? ` — dont ${rares} de rareté supérieure !` : ' !'), 6000);
+      } else {
+        await window.TI.Codex.refresh();
+      }
+    } catch (e) {
+      UI.syncBanner(null);
+      if (e && e.resumable) {
+        UI.toast('Repérage des lieux interrompu (cartothèque saturée) — ' +
+          'il reprendra où il s\u2019est arrêté à la prochaine synchro.', 6000);
+      } else {
+        console.error(e);
+      }
+    } finally { poiScanRunning = false; }
+  }
+
   async function sync() {
     if (syncing) return;
     syncing = true;
@@ -375,6 +423,9 @@
         UI.toast('Rien de neuf sous le soleil : la carte est à jour.');
       }
       if (nSkipped) UI.toast(`${nSkipped} activité(s) ignorée(s) — détail dans le Journal.`, 5000);
+
+      // Lot 2 : les nouvelles sorties passent au crible des hauts lieux
+      await runPoiScan();
     } catch (e) {
       UI.syncBanner(null);
       fog.setCells(allCells);

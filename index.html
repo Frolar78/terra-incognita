@@ -99,15 +99,12 @@
     <header><h2>Codex des lieux</h2>
       <button class="fermer" data-close>fermer ✕</button></header>
     <div class="contenu">
-      <p class="empty">Les hauts lieux du royaume — forteresses, cimes, sanctuaires —
-      apparaîtront ici à mesure que tu les découvriras.</p>
-      <div class="silhouettes">
-        <div class="silhouette">✦</div><div class="silhouette">✦</div>
-        <div class="silhouette">✦</div><div class="silhouette">✦</div>
-        <div class="silhouette">✦</div><div class="silhouette">✦</div>
-      </div>
-      <p class="note-lot">Le Codex ouvrira ses pages au Lot 2 (lieux remarquables,
-      raretés et chroniques).</p>
+      <div id="codex-stats"></div>
+      <div id="codex-filtres"></div>
+      <div id="codex-grille"></div>
+      <p class="empty" id="codex-vide">Les hauts lieux du royaume — forteresses, cimes,
+      sanctuaires — apparaîtront ici à mesure que tes chevauchées passeront
+      à moins de 150 m d'eux.</p>
     </div>
   </section>
 
@@ -205,6 +202,19 @@
 
   <div id="toast" role="status"></div>
 
+  <!-- Fiche d'un haut lieu (Lot 2) -->
+  <div id="poi-fiche" class="hidden">
+    <div class="fiche-carte">
+      <button class="fermer" id="fiche-fermer">✕</button>
+      <div class="fiche-glyphe"></div>
+      <h3 class="fiche-nom"></h3>
+      <p class="fiche-sous"></p>
+      <div class="fiche-lore"></div>
+      <p class="fiche-fait"></p>
+      <p class="fiche-attrib"></p>
+    </div>
+  </div>
+
   <script src="maplibre-gl.js"></script>
   <script src="h3-js.umd.js"></script>
   <script src="config.js"></script>
@@ -214,6 +224,9 @@
   <script src="progress.js"></script>
   <script src="fog.js"></script>
   <script src="ui.js"></script>
+  <script src="poi.js"></script>
+  <script src="lore.js"></script>
+  <script src="codex.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
