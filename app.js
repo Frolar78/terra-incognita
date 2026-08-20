@@ -302,14 +302,16 @@
       } else {
         await window.TI.Codex.refresh();
       }
+      const reste = await window.TI.POI.pendingCount();
+      if (reste) {
+        UI.toast(`${reste} sortie(s) attendent encore leur repérage ` +
+          '(cartothèque saturée) — relance depuis Réglages › Repérer les hauts lieux.', 7000);
+      }
     } catch (e) {
       UI.syncBanner(null);
-      if (e && e.resumable) {
-        UI.toast('Repérage des lieux interrompu (cartothèque saturée) — ' +
-          'il reprendra où il s\u2019est arrêté à la prochaine synchro.', 6000);
-      } else {
-        console.error(e);
-      }
+      console.error(e);
+      UI.toast('Le repérage des lieux a été interrompu — tes trouvailles sont ' +
+        'conservées, relance-le depuis les Réglages.', 6000);
     } finally { poiScanRunning = false; }
   }
 
@@ -450,6 +452,28 @@
   function wireSettings() {
     const $ = (id) => document.getElementById(id);
     $('btn-sync').onclick = () => sync();
+
+    // Lot 2 — repérage des hauts lieux
+    async function majEtatPoi() {
+      const reste = await window.TI.POI.pendingCount();
+      const n = (await DB.getAll('pois')).length;
+      $('poi-etat').textContent = reste
+        ? `${reste} sortie(s) encore à passer au crible — ${n} lieu(x) au Codex`
+        : `${n} lieu(x) au Codex — tout ton historique a été passé au crible`;
+      $('btn-poiscan').textContent = reste ? 'Reprendre' : 'Tout revoir';
+    }
+    majEtatPoi();
+    $('btn-poiscan').onclick = async () => {
+      const reste = await window.TI.POI.pendingCount();
+      if (!reste) {
+        // Nouveau balayage complet : les secteurs déjà connus sont en
+        // cache, donc c'est rapide et sans requête réseau superflue.
+        await window.TI.POI.resetScan();
+        UI.toast('Nouveau balayage de tout l\u2019historique…', 4000);
+      }
+      await runPoiScan();
+      majEtatPoi();
+    };
 
     DB.metaGet('hiRes', false).then((v) => { $('opt-hires').checked = !!v; });
     $('opt-hires').onchange = async (e) => {

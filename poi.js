@@ -95,15 +95,20 @@
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     lastCall = Date.now();
 
+    // Deux tournées sur les deux miroirs : les secteurs denses
+    // (Paris, Lyon…) font souvent saturer la première tentative.
     let data = null, lastErr = null;
-    for (const ep of ENDPOINTS) {
-      try {
-        const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q),
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-        if (r.status === 429 || r.status === 504) { lastErr = new Error('Overpass saturé'); continue; }
-        if (!r.ok) { lastErr = new Error('Overpass HTTP ' + r.status); continue; }
-        data = await r.json(); break;
-      } catch (e) { lastErr = e; }
+    for (let tour = 0; tour < 2 && !data; tour++) {
+      if (tour) await new Promise((r) => setTimeout(r, 3000));
+      for (const ep of ENDPOINTS) {
+        try {
+          const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+          if (r.status === 429 || r.status === 504) { lastErr = new Error('Overpass saturé'); continue; }
+          if (!r.ok) { lastErr = new Error('Overpass HTTP ' + r.status); continue; }
+          data = await r.json(); break;
+        } catch (e) { lastErr = e; }
+      }
     }
     if (!data) throw lastErr || new Error('Overpass injoignable');
 
@@ -190,7 +195,34 @@
   }
 
   // ----------------------------------------------------------
+  // Rareté + persistance d'une fournée de lieux (une sortie)
+  async function finalize(lot) {
+    if (!lot.length) return [];
+    const P = window.TI.Progress;
+    const qids = lot.filter((p) => p.wikidata).map((p) => p.wikidata);
+    let links = {};
+    try { links = qids.length ? await sitelinksCounts(qids) : {}; }
+    catch (e) { /* la rareté se calculera sans le compte de langues */ }
+    for (const p of lot) {
+      const l = p.wikidata && links[p.wikidata] ? links[p.wikidata] : null;
+      if (l && !p.wikipedia) p.wikipedia = l.fr ? 'fr:' + l.fr : (l.en ? 'en:' + l.en : null);
+      p.rarete = rarete(p, l ? l.n : 0);
+      p.xp = RARETE_XP[p.rarete];
+      const d = P.deptOfPoint(p.lat, p.lng);
+      p.dept = d ? d.code : null;
+      p.deptNom = d ? d.nom : null;
+      p.lore = null; p.loreSrc = null; p.fait = null;
+      await DB.put('pois', p);
+    }
+    return lot;
+  }
+
+  // ----------------------------------------------------------
   // Balayage : activités jamais passées au crible des hauts lieux
+  // Règle d'or : on n'enregistre JAMAIS une sortie comme balayée
+  // avant d'avoir sauvegardé ses trouvailles, et une tuile en échec
+  // ne fait pas tomber tout le balayage — la sortie est simplement
+  // laissée en attente pour la prochaine fois.
   let scanning = false;
   async function scanPending(onMsg) {
     if (scanning) return [];
@@ -199,50 +231,79 @@
     try {
       const acts = (await DB.getAll('activities')).filter((a) => !a.poiScanned && a.poly);
       if (!acts.length) return [];
-      const P = window.TI.Progress, Strava = window.TI.Strava;
+      const Strava = window.TI.Strava;
       const known = new Set(await DB.getAllKeys('pois'));
-      const found = [];
+      const total = [];
+      let echecs = 0;
 
       for (let i = 0; i < acts.length; i++) {
         const a = acts[i];
         const pts = Strava.decodePolyline(a.poly);
+        const lot = [];
+        let complet = true;
+
         if (pts.length >= 2) {
           const tiles = tilesForTrace(pts);
           let done = 0;
           for (const key of tiles) {
-            say(`Repérage des hauts lieux — sortie ${i + 1}/${acts.length}, secteur ${++done}/${tiles.size}…`);
+            say(`Repérage des hauts lieux — sortie ${i + 1}/${acts.length}, ` +
+              `secteur ${++done}/${tiles.size}…`);
             let pois;
-            try { pois = await fetchTile(key); }
-            catch (e) { throw Object.assign(e, { resumable: true }); }
+            try {
+              pois = await fetchTile(key);
+            } catch (e) {
+              // Cartothèque saturée : on note et on continue, la sortie
+              // restera en attente et sera reprise plus tard.
+              complet = false; echecs++;
+              continue;
+            }
             for (const poi of pois) {
               if (known.has(poi.id)) continue;
               if (!nearTrace(poi, pts)) continue;
               known.add(poi.id);
-              found.push(Object.assign({}, poi, { act: a.id, foundDate: a.date }));
+              lot.push(Object.assign({}, poi, { act: a.id, foundDate: a.date }));
             }
           }
         }
-        a.poiScanned = true;
-        await DB.put('activities', a); // reprise possible à tout moment
+
+        // 1. Sauvegarder les trouvailles AVANT toute chose
+        try {
+          await finalize(lot);
+          total.push.apply(total, lot);
+        } catch (e) {
+          // Rien n'est perdu : la sortie reste en attente
+          for (const p of lot) known.delete(p.id);
+          complet = false;
+          continue;
+        }
+
+        // 2. Seulement alors, marquer la sortie comme balayée
+        if (complet) {
+          a.poiScanned = true;
+          await DB.put('activities', a);
+        }
       }
 
-      // Rareté (un seul appel Wikidata groupé pour tout le butin)
-      const qids = found.filter((p) => p.wikidata).map((p) => p.wikidata);
-      const links = qids.length ? await sitelinksCounts(qids) : {};
-      for (const p of found) {
-        const l = p.wikidata && links[p.wikidata] ? links[p.wikidata] : null;
-        if (l && !p.wikipedia) p.wikipedia = l.fr ? 'fr:' + l.fr : (l.en ? 'en:' + l.en : null);
-        p.rarete = rarete(p, l ? l.n : 0);
-        p.xp = RARETE_XP[p.rarete];
-        const d = P.deptOfPoint(p.lat, p.lng);
-        p.dept = d ? d.code : null;
-        p.deptNom = d ? d.nom : null;
-        p.lore = null; p.loreSrc = null; p.fait = null;
-        await DB.put('pois', p);
-      }
-      return found;
+      return total;
     } finally { scanning = false; }
   }
 
-  window.TI.POI = { TYPES, RARETES, RARETE_XP, DISCOVER_M, scanPending };
+  // Combien de sorties restent à passer au crible
+  async function pendingCount() {
+    const acts = await DB.getAll('activities');
+    return acts.filter((a) => !a.poiScanned && a.poly).length;
+  }
+
+  // Remet toutes les sorties en attente (le cache des tuiles rend
+  // le nouveau balayage quasi instantané et sans requête réseau).
+  async function resetScan() {
+    const acts = await DB.getAll('activities');
+    for (const a of acts) {
+      if (a.poiScanned) { delete a.poiScanned; await DB.put('activities', a); }
+    }
+    return acts.length;
+  }
+
+  window.TI.POI = { TYPES, RARETES, RARETE_XP, DISCOVER_M,
+    scanPending, pendingCount, resetScan };
 })();
