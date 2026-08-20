@@ -9,8 +9,7 @@
 // ============================================================
 (function () {
   const DB = window.TI.DB;
-  const DUREE_CIBLE = 150000;  // ~2 min 30 de spectacle
-  const PAS_MIN = 45, PAS_MAX = 700;
+  const DUREE_CIBLE = 165000;  // ~2 min 45 de spectacle, cadencé au mois
 
   let map = null, fog = null;
   let running = false, annule = false;
@@ -62,7 +61,29 @@
       });
 
     const totalCells = cells.length;
-    return { etapes, totalCells };
+
+    // Cadence : un battement par MOIS, pas par sortie. C'est ce qui
+    // donne un récit qui respire au lieu d'un diaporama saccadé.
+    const mois = [];
+    let courant = null;
+    for (const e of etapes) {
+      const cle = e.date.slice(0, 7);
+      if (!courant || courant.cle !== cle) {
+        courant = { cle, date: e.date, sorties: [], cells: [], pois: [], lignes: [] };
+        mois.push(courant);
+      }
+      courant.sorties.push(e);
+      courant.cells.push.apply(courant.cells, e.cells);
+      courant.pois.push.apply(courant.pois, e.pois);
+      if (e.ligne.length > 1) courant.lignes.push(e.ligne);
+      if (e.centre) {
+        courant.centre = courant.centre
+          ? [(courant.centre[0] + e.centre[0]) / 2, (courant.centre[1] + e.centre[1]) / 2]
+          : e.centre;
+      }
+    }
+
+    return { etapes, mois, totalCells };
   }
 
   // ----------------------------------------------------------
@@ -88,6 +109,9 @@
 
     // Referme les panneaux : le récit se regarde sur la carte
     document.querySelectorAll('.panel.open, .sheet.open').forEach((p) => p.classList.remove('open'));
+    // Les médaillons du Codex encombreraient la carte : on les efface
+    // le temps du récit, les lieux sont annoncés par le bandeau.
+    if (window.TI.Codex && window.TI.Codex.setVisible) window.TI.Codex.setVisible(false);
     document.querySelectorAll('.tab').forEach((t) =>
       t.classList.toggle('active', t.dataset.panel === 'panel-carte'));
 
@@ -103,92 +127,101 @@
       $('cine-pct').textContent = '';
 
       const data = await preparer();
-      if (!data || !data.etapes.length) {
+      if (!data || !data.mois.length) {
         $('cine-date').textContent = 'Aucune chevauchée à raconter pour l\u2019instant.';
         await attendre(2200);
         return;
       }
-      const { etapes, totalCells } = data;
+      const { mois, totalCells } = data;
 
       // La carte repart vierge : brume totale, aucun tracé
       fog.setCells([]);
       fog.refresh();
-      if (map.getSource('cine-traces')) {
-        map.getSource('cine-traces').setData({ type: 'FeatureCollection', features: [] });
-      }
+      videTraces();
       if (map.getLayer('traces')) map.setLayoutProperty('traces', 'visibility', 'none');
 
       map.jumpTo({ center: [2.4, 46.6], zoom: 4.6 });
-      await attendre(1400);
+      await attendre(1600);
       if (annule) return;
 
-      const pas = Math.max(PAS_MIN, Math.min(PAS_MAX, DUREE_CIBLE / etapes.length));
-      const traits = [];
-      let cellsVues = 0, dernierMois = '', dernierCentre = null;
+      // Un battement par mois : voyage → écriture → déchirure.
+      // La déchirure dure ~1,8 s à elle seule : on la déduit du budget
+      // pour que le récit tienne dans la durée visée.
+      const respiration = Math.max(250,
+        Math.min(2200, DUREE_CIBLE / mois.length - 1800));
+      const anciennes = [];
+      let cellsVues = 0, dernierCentre = null;
 
-      for (let i = 0; i < etapes.length; i++) {
+      for (let i = 0; i < mois.length; i++) {
         if (annule) break;
-        const e = etapes[i];
+        const m = mois[i];
 
-        // Cartouche daté : n'écrit que lorsque le mois change
-        const m = moisFr(e.date);
-        if (m !== dernierMois) {
-          dernierMois = m;
-          $('cine-date').textContent = m.charAt(0).toUpperCase() + m.slice(1);
-        }
-        $('cine-titre').textContent = e.nom || '';
+        const nom = moisFr(m.date);
+        $('cine-date').textContent = nom.charAt(0).toUpperCase() + nom.slice(1);
+        $('cine-titre').textContent = m.sorties.length > 1
+          ? m.sorties.length + ' chevauchées'
+          : (m.sorties[0].nom || '');
 
-        // Caméra : suit les foyers d'activité, sans s'agiter
-        if (e.centre) {
-          const loin = !dernierCentre ||
-            Math.abs(e.centre[0] - dernierCentre[0]) > 1.1 ||
-            Math.abs(e.centre[1] - dernierCentre[1]) > 0.9;
-          if (loin) {
-            map.easeTo({ center: e.centre, zoom: 7.4, duration: 1100 });
-            dernierCentre = e.centre;
-            await attendre(500);
+        // 1. La caméra se déplace lentement, et attend d'être arrivée
+        if (m.centre) {
+          const d = dernierCentre
+            ? Math.hypot(m.centre[0] - dernierCentre[0], m.centre[1] - dernierCentre[1])
+            : 99;
+          if (d > 0.12) {
+            const duree = Math.min(2200, 850 + d * 230);
+            map.easeTo({ center: m.centre, zoom: d > 3 ? 8.2 : 9.1,
+              duration: duree, easing: (t) => t * (2 - t) });
+            dernierCentre = m.centre;
+            await attendre(Math.min(duree, respiration * 0.6));
             if (annule) break;
           }
         }
 
-        // Le tracé s'écrit à l'encre
-        if (e.ligne.length > 1) {
-          traits.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: e.ligne } });
-          const src = map.getSource('cine-traces');
-          if (src) src.setData({ type: 'FeatureCollection', features: traits });
+        // 2. Les tracés du mois s'écrivent, les anciens se ternissent
+        if (m.lignes.length) {
+          majTraces(anciennes, m.lignes);
+          for (const l of m.lignes) anciennes.push(l);
         }
 
-        // Le voile se déchire
-        if (e.cells.length) {
-          fog.addCells(e.cells);
-          fog.refresh();
-          cellsVues += e.cells.length;
+        // 3. Le voile se déchire pour de bon (dissipation animée)
+        if (m.cells.length) {
+          const neuves = new Set(m.cells);
+          fog.addCells(neuves);
+          cellsVues += m.cells.length;
+          await new Promise((res) => {
+            let fini = false;
+            const fin = () => { if (!fini) { fini = true; res(); } };
+            try { fog.dissipate(neuves, fin); } catch (e) { fog.refresh(); fin(); }
+            setTimeout(fin, 2400); // filet de sécurité
+          });
+          if (annule) break;
         }
 
-        // Les hauts lieux surgissent
-        if (e.pois.length) {
-          const p = e.pois[0];
+        // 4. Les hauts lieux du mois se signalent
+        if (m.pois.length) {
+          const p = m.pois.sort((a, b) => (b.rarete || 0) - (a.rarete || 0))[0];
           const el = $('cine-lieu');
-          el.textContent = '✦ ' + p.name;
+          el.textContent = '✦ ' + p.name +
+            (m.pois.length > 1 ? '  (+' + (m.pois.length - 1) + ')' : '');
           el.classList.remove('hidden');
-          setTimeout(() => el.classList.add('hidden'), 2000);
+          setTimeout(() => el.classList.add('hidden'), 2200);
         }
 
-        const k = (i + 1) / etapes.length;
+        const k = (i + 1) / mois.length;
         $('cine-jauge').style.width = (k * 100).toFixed(1) + '%';
-        if (totalCells) {
-          const pct = (cellsVues / window.TI.Progress.counts.total) * 100;
-          $('cine-pct').textContent = window.TI.Progress.formatPct(pct) + ' de la France';
-        }
+        $('cine-pct').textContent = window.TI.Progress.formatPct(
+          (cellsVues / window.TI.Progress.counts.total) * 100) + ' de la France';
 
-        await attendre(pas);
+        await attendre(respiration * 0.4);
       }
 
-      // Épilogue
+      // Épilogue : recul sur le royaume entier
       if (!annule) {
         $('cine-titre').textContent = '';
         $('cine-date').textContent = 'Voilà ton royaume, explorateur.';
-        await attendre(2600);
+        map.easeTo({ center: [2.4, 46.6], zoom: 4.9, duration: 2600,
+          easing: (t) => t * (2 - t) });
+        await attendre(3400);
       }
       jouee = true; // le récit s'est déroulé (jusqu'au bout ou passé volontairement)
     } catch (e) {
@@ -202,10 +235,9 @@
       try {
         fog.setCells(cellsAvant.map((c) => c.h3));
         fog.refresh();
-        if (map.getSource('cine-traces')) {
-          map.getSource('cine-traces').setData({ type: 'FeatureCollection', features: [] });
-        }
+        videTraces();
         if (map.getLayer('traces')) map.setLayoutProperty('traces', 'visibility', 'visible');
+        if (window.TI.Codex && window.TI.Codex.setVisible) window.TI.Codex.setVisible(true);
         map.easeTo({ center: vueAvant.center, zoom: vueAvant.zoom, duration: 900 });
       } catch (e) { /* la carte sera de toute façon rafraîchie */ }
       const el = $('cine-lieu'); if (el) el.classList.add('hidden');
@@ -219,16 +251,44 @@
   }
 
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // Tracés : deux couches, pour que le mois en cours ressorte
+  // sur la sédimentation des mois passés.
+  function fc(lignes) {
+    return { type: 'FeatureCollection', features: lignes.map((l) => ({
+      type: 'Feature', geometry: { type: 'LineString', coordinates: l } })) };
+  }
+  function majTraces(anciennes, courantes) {
+    const a = map.getSource('cine-anciennes'), c = map.getSource('cine-traces');
+    if (a) a.setData(fc(anciennes));
+    if (c) c.setData(fc(courantes));
+  }
+  function videTraces() {
+    const a = map.getSource('cine-anciennes'), c = map.getSource('cine-traces');
+    if (a) a.setData(fc([]));
+    if (c) c.setData(fc([]));
+  }
+
   function init(m, f) {
     map = m; fog = f;
-    // Couche de tracés propre à la cinématique (au-dessus de la brume)
+    // Couches de tracés propres à la cinématique (au-dessus de la brume)
+    if (!map.getSource('cine-anciennes')) {
+      map.addSource('cine-anciennes', { type: 'geojson', data: fc([]) });
+      map.addLayer({
+        id: 'cine-anciennes', type: 'line', source: 'cine-anciennes',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#7A2E2B', 'line-width': 1.6, 'line-opacity': 0.42 },
+      });
+    }
     if (!map.getSource('cine-traces')) {
-      map.addSource('cine-traces', { type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] } });
+      map.addSource('cine-traces', { type: 'geojson', data: fc([]) });
       map.addLayer({
         id: 'cine-traces', type: 'line', source: 'cine-traces',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#7A2E2B', 'line-width': 2.2, 'line-opacity': 0.95 },
+        paint: {
+          'line-color': '#9B3A33', 'line-width': 2.6, 'line-opacity': 0.98,
+          'line-blur': 0.4,
+        },
       });
     }
   }

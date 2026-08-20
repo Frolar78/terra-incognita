@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terra Incognita — Atelier de l'index des lieux</title>
+<style>
+  :root {
+    --parchemin: #EAE0C6; --encre: #3B2F23; --pale: #6E5F4B;
+    --or: #B8934A; --or-vif: #E3B341; --sang: #7A2E2B; --vert: #4F6B3A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px 18px 60px;
+    background: #201C26; color: var(--encre);
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  .feuille {
+    max-width: 780px; margin: 0 auto; padding: 26px 24px;
+    background: var(--parchemin); border: 1px solid var(--or);
+    outline: 3px double var(--or); outline-offset: -10px; border-radius: 4px;
+    box-shadow: 0 16px 50px rgba(0,0,0,.55);
+  }
+  h1 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: .04em; }
+  .sous { color: var(--pale); font-style: italic; margin-bottom: 18px; }
+  .avert {
+    background: rgba(184,147,74,.14); border-left: 3px solid var(--or);
+    padding: 10px 12px; margin-bottom: 18px; font-size: .93rem; line-height: 1.5;
+  }
+  .choix { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  button {
+    font-family: inherit; font-size: .96rem; padding: 9px 16px;
+    border: 1px solid var(--or); border-radius: 3px; cursor: pointer;
+    background: linear-gradient(#F0E7CE, #DCCCA6); color: var(--encre);
+  }
+  button.principal { background: linear-gradient(#4A3B2A, #2E251A); color: #F0E4C0; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .barre-fond {
+    height: 12px; background: rgba(59,47,35,.15); border: 1px solid var(--or);
+    border-radius: 3px; overflow: hidden; margin: 14px 0 6px;
+  }
+  #jauge { height: 100%; width: 0; background: linear-gradient(90deg, var(--or), var(--or-vif)); transition: width .3s; }
+  #etat { font-size: .95rem; min-height: 1.4em; }
+  #chiffres { color: var(--pale); font-size: .88rem; margin-top: 2px; }
+  #journal {
+    margin-top: 16px; max-height: 260px; overflow-y: auto;
+    background: rgba(255,252,240,.5); border: 1px solid rgba(184,147,74,.4);
+    padding: 10px 12px; font-size: .84rem; line-height: 1.55;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  #journal div.err { color: var(--sang); }
+  #journal div.ok { color: var(--vert); }
+  .grille {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 4px; margin-top: 14px;
+  }
+  .case {
+    text-align: center; font-size: .72rem; padding: 4px 2px; border-radius: 2px;
+    background: rgba(59,47,35,.08); color: var(--pale);
+    border: 1px solid rgba(59,47,35,.15);
+  }
+  .case.fait { background: var(--vert); color: #F0E4C0; border-color: #3A5029; }
+  .case.encours { background: var(--or-vif); color: #3B2F23; border-color: var(--or); }
+  .case.echec { background: var(--sang); color: #F0E4C0; border-color: #5A1F1D; }
+  .fin {
+    margin-top: 18px; padding: 14px; text-align: center;
+    background: rgba(79,107,58,.12); border: 1px solid var(--vert); border-radius: 3px;
+  }
+  .fin.hidden { display: none; }
+  code { background: rgba(59,47,35,.1); padding: 1px 5px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="feuille">
+  <h1>Atelier de l'index des lieux</h1>
+  <div class="sous">Terra Incognita — à lancer une seule fois</div>
+
+  <div class="avert">
+    Cet outil interroge OpenStreetMap département par département et fabrique
+    l'index des hauts lieux de France. Une fois les fichiers déposés dans le dépôt,
+    l'application n'aura <strong>plus jamais</strong> besoin d'interroger le réseau :
+    le repérage deviendra instantané, sur tous les appareils.<br><br>
+    <strong>Laisse cet onglet au premier plan</strong> et empêche la mise en veille.
+    Tout est sauvegardé au fur et à mesure : si ça s'interrompt, relance simplement
+    la page et reprends — les départements déjà faits ne seront pas refaits.
+  </div>
+
+  <div class="choix">
+    <button id="btn-mes" class="principal">Mes départements d'abord</button>
+    <button id="btn-france">Toute la France</button>
+    <button id="btn-stop" disabled>Arrêter</button>
+  </div>
+
+  <div class="barre-fond"><div id="jauge"></div></div>
+  <div id="etat">Prêt.</div>
+  <div id="chiffres"></div>
+
+  <div class="grille" id="grille"></div>
+  <div id="journal"></div>
+
+  <div class="fin hidden" id="fin">
+    <div id="fin-txt"></div>
+    <p><button id="btn-zip" class="principal">Télécharger l'index (zip)</button></p>
+    <div style="font-size:.85rem;color:var(--pale)">
+      Décompresse, puis dépose tous les fichiers <code>lieux-XX.json</code>
+      et <code>lieux-index.json</code> à la racine du dépôt GitHub.
+    </div>
+  </div>
+</div>
+
+<script src="jszip.min.js"></script>
+<script>
+(function () {
+  // ============================================================
+  // Atelier d'index — interroge Overpass par département, avec
+  // découpe adaptative (on ne subdivise que si la requête échoue),
+  // reprise après interruption et sauvegarde permanente en base.
+  // ============================================================
+  const ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.osm.ch/api/interpreter',
+  ];
+  const PAUSE_MS = 1200;     // politesse entre deux requêtes
+  const TIMEOUT_S = 180;     // délai accordé à Overpass
+  const TYPES = ['forteresse', 'tour', 'sanctuaire', 'vestiges',
+    'cime', 'caverne', 'fanal', 'cascade'];
+
+  const $ = (id) => document.getElementById(id);
+  const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
+  let stop = false, depts = [], base = null;
+
+  // ---------- petite base locale (reprise après coupure) -------
+  function ouvrir() {
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open('ti-atelier', 1);
+      rq.onupgradeneeded = () => {
+        const d = rq.result;
+        if (!d.objectStoreNames.contains('depts'))
+          d.createObjectStore('depts', { keyPath: 'code' });
+      };
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+  }
+  const lire = (code) => new Promise((res) => {
+    const rq = base.transaction('depts').objectStore('depts').get(code);
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => res(null);
+  });
+  const ecrire = (obj) => new Promise((res, rej) => {
+    const t = base.transaction('depts', 'readwrite');
+    t.objectStore('depts').put(obj);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+  const tout = () => new Promise((res) => {
+    const rq = base.transaction('depts').objectStore('depts').getAll();
+    rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]);
+  });
+
+  // ---------- journal ------------------------------------------
+  function dire(msg, cls) {
+    const d = document.createElement('div');
+    if (cls) d.className = cls;
+    const h = new Date().toLocaleTimeString('fr-FR');
+    d.textContent = h + '  ' + msg;
+    $('journal').appendChild(d);
+    $('journal').scrollTop = $('journal').scrollHeight;
+  }
+
+  // ---------- géométrie ----------------------------------------
+  function bboxOf(geom) {
+    let x1 = 180, y1 = 90, x2 = -180, y2 = -90;
+    const parcours = (co) => {
+      if (typeof co[0] === 'number') {
+        if (co[0] < x1) x1 = co[0]; if (co[0] > x2) x2 = co[0];
+        if (co[1] < y1) y1 = co[1]; if (co[1] > y2) y2 = co[1];
+      } else for (const c of co) parcours(c);
+    };
+    parcours(geom.coordinates);
+    return [y1, x1, y2, x2]; // S, W, N, E
+  }
+  function dansAnneau(lat, lng, anneau) {
+    let dedans = false;
+    for (let i = 0, j = anneau.length - 1; i < anneau.length; j = i++) {
+      const xi = anneau[i][0], yi = anneau[i][1];
+      const xj = anneau[j][0], yj = anneau[j][1];
+      if (((yi > lat) !== (yj > lat)) &&
+          (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) dedans = !dedans;
+    }
+    return dedans;
+  }
+  function dansDept(lat, lng, geom) {
+    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+    for (const p of polys) {
+      if (!dansAnneau(lat, lng, p[0])) continue;
+      let trou = false;
+      for (let i = 1; i < p.length; i++) if (dansAnneau(lat, lng, p[i])) { trou = true; break; }
+      if (!trou) return true;
+    }
+    return false;
+  }
+
+  // ---------- classification (identique à l'application) -------
+  function classify(t) {
+    if (!t || !t.name) return null;
+    const h = t.historic || '';
+    if (/^(castle|fort|citywalls|city_gate|manor)$/.test(h)) return 'forteresse';
+    if (h === 'tower') return 'tour';
+    if (t.man_made === 'tower' &&
+        /^(observation|watchtower|defensive)$/.test(t['tower:type'] || '')) return 'tour';
+    if (/^(ruins|archaeological_site)$/.test(h)) return 'vestiges';
+    if (/^(monastery|abbey|wayside_shrine|chapel|church|hermitage)$/.test(h)) return 'sanctuaire';
+    if (t.amenity === 'place_of_worship') return 'sanctuaire';
+    if (/^(church|chapel|cathedral|basilica)$/.test(t.building || '')) return 'sanctuaire';
+    if (/^(peak|volcano)$/.test(t.natural || '')) return 'cime';
+    if (t.natural === 'cave_entrance') return 'caverne';
+    if (t.man_made === 'lighthouse') return 'fanal';
+    if (t.waterway === 'waterfall') return 'cascade';
+    return null;
+  }
+
+  function requete(bb) {
+    const b = `(${bb[0].toFixed(4)},${bb[1].toFixed(4)},${bb[2].toFixed(4)},${bb[3].toFixed(4)})`;
+    return `[out:json][timeout:${TIMEOUT_S}];(
+      nwr["historic"~"^(castle|fort|tower|ruins|archaeological_site|monastery|abbey|city_gate|citywalls|wayside_shrine|chapel|church|manor|hermitage)$"]["name"]${b};
+      nwr["man_made"="lighthouse"]["name"]${b};
+      nwr["man_made"="tower"]["tower:type"~"^(observation|watchtower|defensive)$"]["name"]${b};
+      node["natural"~"^(peak|volcano)$"]["name"]${b};
+      node["natural"="cave_entrance"]["name"]${b};
+      nwr["building"~"^(church|chapel|cathedral|basilica)$"]["name"]${b};
+      nwr["amenity"="place_of_worship"]["name"]${b};
+      nwr["waterway"="waterfall"]["name"]${b};
+    );out center tags;`;
+  }
+
+  let dernier = 0;
+  async function overpass(bb) {
+    const attente = dernier + PAUSE_MS - Date.now();
+    if (attente > 0) await dodo(attente);
+    dernier = Date.now();
+    let err = null;
+    for (const ep of ENDPOINTS) {
+      if (stop) throw new Error('arrêt demandé');
+      try {
+        const r = await fetch(ep, { method: 'POST',
+          body: 'data=' + encodeURIComponent(requete(bb)),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        if (r.status === 429 || r.status === 504) { err = new Error('saturé (' + r.status + ')'); await dodo(4000); continue; }
+        if (!r.ok) { err = new Error('HTTP ' + r.status); continue; }
+        return await r.json();
+      } catch (e) { err = e; }
+    }
+    throw err || new Error('injoignable');
+  }
+
+  // Découpe adaptative : on subdivise seulement en cas d'échec
+  async function collecter(bb, profondeur, sortie, onPas) {
+    let data;
+    try {
+      data = await overpass(bb);
+    } catch (e) {
+      if (stop) throw e;
+      if (profondeur >= 3) { dire('  secteur abandonné : ' + e.message, 'err'); return false; }
+      const mLat = (bb[0] + bb[2]) / 2, mLng = (bb[1] + bb[3]) / 2;
+      dire('  trop dense, découpe en 4 (' + e.message + ')');
+      let ok = true;
+      for (const q of [[bb[0], bb[1], mLat, mLng], [bb[0], mLng, mLat, bb[3]],
+                       [mLat, bb[1], bb[2], mLng], [mLat, mLng, bb[2], bb[3]]]) {
+        ok = (await collecter(q, profondeur + 1, sortie, onPas)) && ok;
+      }
+      return ok;
+    }
+    for (const el of data.elements || []) {
+      const t = el.tags || {};
+      const type = classify(t);
+      if (!type) continue;
+      const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+      const lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+      if (lat == null || lng == null) continue;
+      sortie.set(el.type + '/' + el.id, {
+        type, name: t.name, lat, lng,
+        ele: t.ele ? parseFloat(t.ele) : null,
+        wd: t.wikidata || null,
+        wp: t.wikipedia || null,
+        her: !!(t.heritage || t['ref:mhs'] || t['mhs:inscription_date']),
+        com: t['addr:city'] || null,
+      });
+    }
+    if (onPas) onPas();
+    return true;
+  }
+
+  // ---------- boucle principale --------------------------------
+  async function lancer(codes) {
+    stop = false;
+    $('btn-mes').disabled = $('btn-france').disabled = true;
+    $('btn-stop').disabled = false;
+    $('fin').classList.add('hidden');
+
+    let faits = 0;
+    for (const code of codes) {
+      if (stop) break;
+      const d = depts.find((x) => x.code === code);
+      if (!d) continue;
+      const deja = await lire(code);
+      if (deja && deja.complet) {
+        faits++; majGrille(code, 'fait'); majJauge(faits, codes.length);
+        continue;
+      }
+      majGrille(code, 'encours');
+      $('etat').textContent = `${d.nom} (${code}) — interrogation de la cartothèque…`;
+      const sortie = new Map();
+      let ok = true;
+      try {
+        ok = await collecter(bboxOf(d.geom), 0, sortie, null);
+      } catch (e) {
+        if (stop) { majGrille(code, ''); break; }
+        ok = false;
+      }
+      // On ne garde que ce qui tombe réellement dans le département
+      const dedans = [];
+      for (const p of sortie.values()) {
+        if (dansDept(p.lat, p.lng, d.geom)) dedans.push(p);
+      }
+      await ecrire({ code, nom: d.nom, lieux: dedans, complet: ok, ts: Date.now() });
+      faits++;
+      majGrille(code, ok ? 'fait' : 'echec');
+      majJauge(faits, codes.length);
+      dire(`${d.nom} (${code}) — ${dedans.length} lieux retenus` + (ok ? '' : ' [incomplet]'),
+        ok ? 'ok' : 'err');
+    }
+
+    $('btn-mes').disabled = $('btn-france').disabled = false;
+    $('btn-stop').disabled = true;
+    $('etat').textContent = stop ? 'Arrêté. Relance quand tu veux, la reprise est automatique.'
+      : 'Terminé.';
+    await bilan();
+  }
+
+  function majJauge(f, t) {
+    $('jauge').style.width = ((f / t) * 100).toFixed(1) + '%';
+    $('chiffres').textContent = `${f} / ${t} départements`;
+  }
+  function majGrille(code, cls) {
+    const el = document.querySelector('.case[data-c="' + code + '"]');
+    if (el) el.className = 'case' + (cls ? ' ' + cls : '');
+  }
+
+  async function bilan() {
+    const rows = await tout();
+    const n = rows.reduce((s, r) => s + r.lieux.length, 0);
+    if (!rows.length) return;
+    $('fin-txt').textContent =
+      `${rows.length} département(s) traité(s), ${n.toLocaleString('fr-FR')} lieux au total.`;
+    $('fin').classList.remove('hidden');
+  }
+
+  // ---------- fabrication du zip -------------------------------
+  async function faireZip() {
+    const rows = await tout();
+    const zip = new JSZip();
+    const index = { version: 1, genere: new Date().toISOString(), types: TYPES, depts: {} };
+    for (const r of rows) {
+      const p = r.lieux.map((x) => [
+        TYPES.indexOf(x.type),
+        Math.round(x.lat * 1e5) / 1e5,
+        Math.round(x.lng * 1e5) / 1e5,
+        x.name,
+        x.ele != null ? Math.round(x.ele) : 0,
+        x.wd || 0, x.wp || 0, x.her ? 1 : 0, x.com || 0,
+      ]);
+      zip.file('lieux-' + r.code + '.json',
+        JSON.stringify({ d: r.code, v: 1, t: TYPES, p }));
+      index.depts[r.code] = { nom: r.nom, n: p.length, complet: !!r.complet };
+    }
+    zip.file('lieux-index.json', JSON.stringify(index, null, 1));
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'terra-incognita-index.zip';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  // ---------- démarrage ----------------------------------------
+  async function init() {
+    base = await ouvrir();
+    dire('Chargement des contours de départements…');
+    const geo = await (await fetch('departements.geojson')).json();
+    depts = geo.features.map((f) => ({
+      code: f.properties.code, nom: f.properties.nom, geom: f.geometry,
+    })).sort((a, b) => a.code.localeCompare(b.code));
+
+    const g = $('grille');
+    g.innerHTML = depts.map((d) =>
+      `<div class="case" data-c="${d.code}" title="${d.nom}">${d.code}</div>`).join('');
+    const rows = await tout();
+    for (const r of rows) majGrille(r.code, r.complet ? 'fait' : 'echec');
+    dire(depts.length + ' départements chargés. ' +
+      (rows.length ? rows.length + ' déjà traités (ils seront ignorés).' : ''), 'ok');
+    $('etat').textContent = 'Prêt. Choisis une option ci-dessus.';
+    await bilan();
+
+    // Départements réellement foulés, lus dans la base de l'application
+    $('btn-mes').onclick = async () => {
+      let codes = [];
+      try {
+        codes = await mesDepts();
+      } catch (e) { /* base de l'app absente */ }
+      if (!codes.length) {
+        dire('Aucune donnée d\u2019exploration trouvée dans ce navigateur — ' +
+          'lance plutôt « Toute la France ».', 'err');
+        return;
+      }
+      dire('Départements foulés : ' + codes.join(', '));
+      lancer(codes);
+    };
+    $('btn-france').onclick = () => lancer(depts.map((d) => d.code));
+    $('btn-stop').onclick = () => { stop = true; $('etat').textContent = 'Arrêt en cours…'; };
+    $('btn-zip').onclick = faireZip;
+  }
+
+  // Lit les cellules de l'application pour connaître les départements visités
+  function mesDepts() {
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open('terra-incognita');
+      rq.onsuccess = () => {
+        const d = rq.result;
+        if (!d.objectStoreNames.contains('cells')) { d.close(); return res([]); }
+        const q = d.transaction('cells').objectStore('cells').getAll();
+        q.onsuccess = () => {
+          const s = new Set();
+          for (const c of q.result || []) if (c.d) s.add(c.d);
+          d.close(); res([...s].sort());
+        };
+        q.onerror = () => { d.close(); res([]); };
+      };
+      rq.onerror = () => rej(rq.error);
+    });
+  }
+
+  init().catch((e) => { dire('Erreur au démarrage : ' + e.message, 'err'); });
+})();
+</script>
+</body>
+</html>

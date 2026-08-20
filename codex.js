@@ -10,11 +10,29 @@
   const $ = (id) => document.getElementById(id);
 
   const COULEURS = ['#8A7F6D', '#6B7F4F', '#2E4A66', '#6D3A5D', '#C9A227'];
+  const ZOOM_MIN = 8.4;   // en deçà, les médaillons se marchent dessus
 
   let map = null;
   let markers = [];
   let filtre = 'tous';
   let pois = [];
+  let masque = false;     // masquage forcé (cinématique)
+
+  // Les marqueurs n'apparaissent qu'à un zoom où ils sont lisibles.
+  // Les Légendaires et Épiques restent visibles un cran plus tôt :
+  // ce sont des repères, pas du bruit.
+  function appliquerVisibilite() {
+    if (!map) return;
+    const z = map.getZoom();
+    for (const m of markers) {
+      const r = m._tiRarete || 0;
+      const seuil = r >= 3 ? ZOOM_MIN - 1.6 : ZOOM_MIN;
+      const el = m.getElement();
+      el.style.display = (!masque && z >= seuil) ? '' : 'none';
+    }
+  }
+
+  function setVisible(v) { masque = !v; appliquerVisibilite(); }
 
   function tri(a, b) {
     if (b.rarete !== a.rarete) return b.rarete - a.rarete;
@@ -86,9 +104,12 @@
       el.innerHTML = `<span>${T[p.type].glyphe}</span>`;
       el.title = p.name;
       el.addEventListener('click', (e) => { e.stopPropagation(); openFiche(p); });
-      markers.push(new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([p.lng, p.lat]).addTo(map));
+      const mk = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([p.lng, p.lat]).addTo(map);
+      mk._tiRarete = p.rarete || 0;
+      markers.push(mk);
     }
+    appliquerVisibilite();
   }
 
   // --------------------------------------------------------
@@ -128,6 +149,7 @@
 
   function init(m) {
     map = m;
+    map.on('zoom', appliquerVisibilite);
     const f = $('poi-fiche');
     if (f) {
       f.addEventListener('click', (e) => { if (e.target === f) f.classList.add('hidden'); });
@@ -142,5 +164,5 @@
     renderMarkers();
   }
 
-  window.TI.Codex = { init, refresh, openFiche };
+  window.TI.Codex = { init, refresh, openFiche, setVisible };
 })();
