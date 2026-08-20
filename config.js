@@ -5,11 +5,11 @@
 window.TI = window.TI || {};
 window.TI.CONFIG = {
   // ID client de TON application Strava (portail développeur Strava)
-  STRAVA_CLIENT_ID: 'REMPLACE_MOI',
+  STRAVA_CLIENT_ID: '273336',
 
   // URL de TON Worker Cloudflare, sans / final
   // ex. 'https://terra-incognita.jean-dupont.workers.dev'
-  WORKER_URL: 'REMPLACE_MOI',
+  WORKER_URL: 'https://terra-incognita.arthurfrohlich.workers.dev',
 
   // Résolution H3 (9 = cellules d'environ 0,1 km²). Ne change pas
   // cette valeur sans recalculer data/dept-cell-counts.json.
