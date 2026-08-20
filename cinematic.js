@@ -126,8 +126,41 @@
 
   function overlay(afficher) {
     const el = $('cine-overlay');
-    if (el) el.classList.toggle('hidden', !afficher);
+    if (!el) return;
+    if (afficher) {
+      el.classList.remove('hidden');
+      document.body.classList.add('cinema');
+      // un souffle pour que la transition d'opacité s'amorce
+      requestAnimationFrame(() => el.classList.add('visible'));
+    } else {
+      el.classList.remove('visible');
+      document.body.classList.remove('cinema');
+      setTimeout(() => el.classList.add('hidden'), 900);
+    }
   }
+
+  // Fondu enchaîné du cartouche : le texte ne saute jamais
+  async function ecrireCartouche(date, sous) {
+    const h = document.querySelector('.cine-haut');
+    if (h) { h.classList.add('transition'); await attendre(320); }
+    $('cine-date').textContent = date;
+    $('cine-titre').textContent = sous || '';
+    if (h) h.classList.remove('transition');
+  }
+
+  function carton(id, montrer) {
+    const el = $(id);
+    if (!el) return Promise.resolve();
+    if (montrer) {
+      el.classList.remove('hidden');
+      requestAnimationFrame(() => el.classList.add('montre'));
+      return attendre(1100);
+    }
+    el.classList.remove('montre');
+    return attendre(1100).then(() => el.classList.add('hidden'));
+  }
+
+  const nb = (n) => Math.round(n).toLocaleString('fr-FR');
 
   // ----------------------------------------------------------
   async function jouer() {
@@ -153,11 +186,14 @@
 
     try {
       overlay(true);
-      $('cine-date').textContent = 'Le chroniqueur prépare le récit…';
-      $('cine-titre').textContent = 'récit v3';
+      $('cine-date').textContent = '';
       $('cine-titre').textContent = '';
       $('cine-jauge').style.width = '0%';
       $('cine-pct').textContent = '';
+      const fin0 = $('cine-final');
+      if (fin0) { fin0.classList.remove('montre'); fin0.classList.add('hidden'); }
+      $('cine-carton-txt').textContent = 'Le chroniqueur ouvre les registres…';
+      await carton('cine-carton', true);
 
       const data = await preparer();
       if (!data || !data.scenes.length) {
@@ -174,8 +210,14 @@
       if (map.getLayer('traces')) map.setLayoutProperty('traces', 'visibility', 'none');
 
       map.jumpTo({ center: [2.4, 46.6], zoom: 4.6 });
-      await attendre(1600);
+
+      const an = new Date(scenes[0].date).getFullYear();
+      $('cine-carton-txt').textContent =
+        'Le royaume dort sous la brume. Nous sommes en l\u2019an ' + an + '.';
+      await attendre(2300);
+      await carton('cine-carton', false);
       if (annule) return;
+      await attendre(500);
 
       // Budget : la déchirure dure ~1,8 s, le voyage jusqu'à ~2 s.
       const respiration = Math.max(300,
@@ -257,13 +299,15 @@
         await attendre(respiration);
       }
 
-      // Épilogue : recul sur le royaume entier
+      // Épilogue : recul sur le royaume entier, puis carton de clôture
       if (!annule) {
-        $('cine-titre').textContent = '';
-        $('cine-date').textContent = 'Voilà ton royaume, explorateur.';
-        map.easeTo({ center: [2.4, 46.6], zoom: 4.9, duration: 2600,
+        await ecrireCartouche('Aujourd\u2019hui', '');
+        map.easeTo({ center: [2.4, 46.6], zoom: 4.9, duration: 3000,
           easing: (t) => t * (2 - t) });
-        await attendre(3400);
+        await attendre(3600);
+        await bilanFinal();
+        await attendre(5000);
+        await carton('cine-final', false);
       }
       jouee = true; // le récit s'est déroulé (jusqu'au bout ou passé volontairement)
     } catch (e) {
@@ -283,6 +327,10 @@
         map.easeTo({ center: vueAvant.center, zoom: vueAvant.zoom, duration: 900 });
       } catch (e) { /* la carte sera de toute façon rafraîchie */ }
       const el = $('cine-lieu'); if (el) el.classList.add('hidden');
+      for (const id of ['cine-carton', 'cine-final']) {
+        const c = $(id);
+        if (c) { c.classList.remove('montre'); c.classList.add('hidden'); }
+      }
       if (btnPasser) btnPasser.removeEventListener('click', onPasser);
       overlay(false);
       running = false;
@@ -309,6 +357,29 @@
     const a = map.getSource('cine-anciennes'), c = map.getSource('cine-traces');
     if (a) a.setData(fc([]));
     if (c) c.setData(fc([]));
+  }
+
+  // Carton de clôture : les chiffres du royaume
+  async function bilanFinal() {
+    const [acts, pois, cells] = await Promise.all([
+      DB.getAll('activities'), DB.getAll('pois'), DB.getAll('cells'),
+    ]);
+    const km = acts.reduce((t, a) => t + (a.distance || 0), 0) / 1000;
+    const jours = new Set(acts.map((a) => String(a.date).slice(0, 10))).size;
+    const depts = new Set(cells.map((c) => c.d).filter(Boolean)).size;
+    const pct = window.TI.Progress.formatPct(
+      (cells.length / window.TI.Progress.counts.total) * 100);
+    const el = $('cine-final-chiffres');
+    if (el) {
+      el.innerHTML =
+        `<div class="cf"><b>${nb(km)}</b><span>kilomètres</span></div>` +
+        `<div class="cf"><b>${nb(jours)}</b><span>jours d'exploration</span></div>` +
+        `<div class="cf"><b>${nb(pois.length)}</b><span>hauts lieux</span></div>` +
+        `<div class="cf"><b>${nb(depts)}</b><span>contrées foulées</span></div>` +
+        `<div class="cf" style="grid-column:1/-1"><b>${pct}</b>` +
+        `<span>de la France arrachée à la brume</span></div>`;
+    }
+    await carton('cine-final', true);
   }
 
   function init(m, f) {
