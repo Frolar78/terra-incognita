@@ -118,11 +118,8 @@
     <header><h2>Hauts faits</h2>
       <button class="fermer" data-close>fermer ✕</button></header>
     <div class="contenu">
-      <div class="silhouettes">
-        <div class="silhouette">🜲</div><div class="silhouette">🜲</div>
-        <div class="silhouette">🜲</div><div class="silhouette">🜲</div>
-      </div>
-      <p class="note-lot">Les hauts faits et titres seront gravés ici au Lot 3.</p>
+      <div id="faits-stats"></div>
+      <div id="faits-liste"></div>
     </div>
   </section>
 
@@ -162,8 +159,8 @@
       </div>
       <div class="reglage">
         <div class="lib">Rejouer la cinématique
-          <small>La grande révélation — disponible au Lot 3</small></div>
-        <button class="btn" disabled>Bientôt</button>
+          <small>La grande révélation, du premier pas à aujourd'hui</small></div>
+        <button id="btn-cine" class="btn">Rejouer</button>
       </div>
       <div class="reglage">
         <div class="lib">Se délier de Strava
@@ -207,6 +204,28 @@
 
   <div id="toast" role="status"></div>
 
+  <!-- Cinématique de révélation (Lot 3) -->
+  <div id="cine-overlay" class="hidden">
+    <div class="cine-haut">
+      <div id="cine-date"></div>
+      <div id="cine-titre"></div>
+    </div>
+    <div id="cine-lieu" class="hidden"></div>
+    <div class="cine-bas">
+      <div id="cine-pct"></div>
+      <div class="cine-barre"><div id="cine-jauge"></div></div>
+      <button id="cine-passer">Passer le récit</button>
+    </div>
+  </div>
+
+  <!-- Annonce d'un haut fait (Lot 3) -->
+  <div id="fait-annonce" class="hidden">
+    <div class="fa-sceau"></div>
+    <div class="fa-sur">Haut fait accompli</div>
+    <div class="fa-titre"></div>
+    <div class="fa-xp"></div>
+  </div>
+
   <!-- Fiche d'un haut lieu (Lot 2) -->
   <div id="poi-fiche" class="hidden">
     <div class="fiche-carte">
@@ -232,6 +251,8 @@
   <script src="poi.js"></script>
   <script src="lore.js"></script>
   <script src="codex.js"></script>
+  <script src="feats.js"></script>
+  <script src="cinematic.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

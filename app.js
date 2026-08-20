@@ -93,6 +93,7 @@
     xpTotal = acts.reduce((s, a) => s + (a.xp || 0), 0);
     const pois = await DB.getAll('pois');
     xpTotal += pois.reduce((s, p) => s + (p.xp || 0), 0);
+    xpTotal += await window.TI.Feats.xpAcquise();
     return acts;
   }
 
@@ -230,6 +231,8 @@
 
       window.TI.Codex.init(map);
       await window.TI.Codex.refresh();
+      window.TI.Cine.init(map, fog);
+      await renderFaits();
 
       wireSettings();
 
@@ -239,7 +242,10 @@
         UI.toast('Première expédition : import de tout ton historique Strava…', 6000);
         sync();
       } else {
-        // Lot 2 : repérer les hauts lieux des sorties déjà importées
+        // Lot 3 : la grande révélation, une fois, au premier lancement
+        // d'une carte déjà peuplée — puis le repérage des lieux.
+        if (!(await window.TI.Cine.dejaVue())) await window.TI.Cine.jouer();
+        await checkFaits();
         runPoiScan();
       }
     });
@@ -274,6 +280,87 @@
   // Synchronisation Strava
   // ==========================================================
   // ==========================================================
+  // Lot 3 — hauts faits
+  // ==========================================================
+  async function renderFaits() {
+    const liste = await window.TI.Feats.state();
+    const acquis = liste.filter((f) => f.acquis).length;
+    const stats = document.getElementById('faits-stats');
+    if (stats) {
+      const pct = liste.length ? (acquis / liste.length) * 100 : 0;
+      stats.innerHTML = `${acquis} / ${liste.length} hauts faits accomplis` +
+        `<div class="fs-barre"><div class="fs-jauge" style="width:${pct.toFixed(1)}%"></div></div>`;
+    }
+    const el = document.getElementById('faits-liste');
+    if (!el) return;
+    const familles = [];
+    for (const f of liste) if (!familles.includes(f.fam)) familles.push(f.fam);
+    let h = '';
+    for (const fam of familles) {
+      h += `<div class="fa-famille">${fam}</div>`;
+      const dedans = liste.filter((f) => f.fam === fam)
+        .sort((a, b) => (b.acquis ? 1 : 0) - (a.acquis ? 1 : 0));
+      for (const f of dedans) {
+        const k = f.max ? Math.min(1, f.cur / f.max) : 0;
+        const chiffres = f.acquis
+          ? 'Accompli le ' + new Date(f.date).toLocaleDateString('fr-FR')
+          : `${fmtNb(f.cur)} / ${fmtNb(f.max)}`;
+        h += `<div class="fait${f.acquis ? ' acquis' : ''}">
+          <div class="sceau">${f.sceau}</div>
+          <div class="corps">
+            <div class="titre">${f.titre}</div>
+            <div class="cond">${f.cond}</div>` +
+          (f.acquis ? '' :
+            `<div class="jauge-fond"><div class="jauge" style="width:${(k * 100).toFixed(1)}%"></div></div>`) +
+          `<div class="chiffres">${chiffres}</div>
+          </div>
+          <div class="xp">+${f.xp} XP</div>
+        </div>`;
+      }
+    }
+    el.innerHTML = h;
+  }
+
+  function fmtNb(n) {
+    if (typeof n !== 'number') return String(n);
+    return Number.isInteger(n) ? n.toLocaleString('fr-FR')
+      : n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+  }
+
+  // Annonce à l'écran, une distinction après l'autre
+  function annonceFait(f) {
+    return new Promise((res) => {
+      const el = document.getElementById('fait-annonce');
+      if (!el) return res();
+      el.querySelector('.fa-sceau').textContent = f.sceau;
+      el.querySelector('.fa-titre').textContent = f.titre;
+      el.querySelector('.fa-xp').textContent = '+' + f.xp + ' XP';
+      el.classList.remove('hidden');
+      // Redémarre l'animation même si l'annonce s'enchaîne
+      el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+      setTimeout(() => { el.classList.add('hidden'); res(); }, 3000);
+    });
+  }
+
+  async function checkFaits() {
+    let nouveaux = [];
+    try { nouveaux = await window.TI.Feats.evaluate(); }
+    catch (e) { console.error(e); return; }
+    if (nouveaux.length) {
+      let gain = 0;
+      for (const f of nouveaux) {
+        gain += f.xp;
+        await journal('fait', `${f.sceau} Haut fait : « ${f.titre} » — +${f.xp} XP.`);
+      }
+      xpTotal += gain;
+      UI.updateHUD(xpTotal);
+      UI.renderJournal(await DB.getAll('journal'));
+      for (const f of nouveaux) await annonceFait(f);
+    }
+    await renderFaits();
+  }
+
+  // ==========================================================
   // Lot 2 — repérage des hauts lieux le long des sorties
   // ==========================================================
   let poiScanRunning = false;
@@ -302,6 +389,7 @@
       } else {
         await window.TI.Codex.refresh();
       }
+      await checkFaits();
       const reste = await window.TI.POI.pendingCount();
       if (reste) {
         UI.toast(`${reste} sortie(s) attendent encore leur repérage ` +
@@ -321,6 +409,7 @@
     const btn = document.getElementById('btn-sync');
     if (btn) btn.disabled = true;
     const hiRes = await DB.metaGet('hiRes', false);
+    const premierImport = !(await DB.metaGet('firstSyncDone', false));
     const after = await DB.metaGet('lastSync', 0);
     const knownIds = new Set(await DB.getAllKeys('activities'));
     const newCellsAll = new Set();
@@ -426,6 +515,11 @@
       }
       if (nSkipped) UI.toast(`${nSkipped} activité(s) ignorée(s) — détail dans le Journal.`, 5000);
 
+      // Lot 3 : au tout premier import, la grande révélation
+      if (premierImport && !(await window.TI.Cine.dejaVue())) {
+        await window.TI.Cine.jouer();
+      }
+
       // Lot 2 : les nouvelles sorties passent au crible des hauts lieux
       await runPoiScan();
     } catch (e) {
@@ -482,6 +576,8 @@
         UI.toast('Haute précision activée : un appel Strava par activité — le quota s\'épuisera plus vite.', 6000);
     };
 
+    $('btn-cine').onclick = () => window.TI.Cine.jouer();
+
     $('btn-export').onclick = async () => {
       const data = await DB.exportAll();
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -507,7 +603,9 @@
     $('btn-resync').onclick = async () => {
       if (!confirm('Effacer la progression locale et réimporter tout l\'historique Strava ?')) return;
       await DB.clear('cells'); await DB.clear('activities'); await DB.clear('journal');
+      await DB.clear('pois'); // les lieux se retrouvent au repérage (secteurs en cache)
       await DB.metaSet('lastSync', 0); await DB.metaSet('firstSyncDone', false);
+      await DB.metaSet('feats', {}); await DB.metaSet('cineVue', false);
       location.reload();
     };
 
