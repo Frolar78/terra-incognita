@@ -11,11 +11,11 @@
 // la dérive de la fumée ne fait que recomposer des drawImage.
 // ============================================================
 (function () {
-  const COL_CORE = '43,39,51';     // #2B2733 cœur de brume
-  const COL_EDGE = '90,81,104';    // #5A5168 lisière
+  const COL_CORE = '110,101,122';  // #6E657A cœur de brume (clair)
+  const COL_EDGE = '152,142,158';  // #988E9E lisière (plus claire encore)
   const GOLD = '227,179,65';       // #E3B341 liseré
-  const FOG_ALPHA = 0.62;          // voile : la carte reste lisible dessous
-  const REVEAL_LIGHT = 0.08;       // clarté ajoutée sur les terres révélées
+  const FOG_ALPHA = 0.55;          // voile : la carte reste lisible dessous
+  const REVEAL_LIGHT = 0.10;       // clarté ajoutée sur les terres révélées
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function mercX(lng) { return (lng + 180) / 360; }
@@ -214,19 +214,19 @@
       const g = ctx.createRadialGradient(w * .45, h * .42, w * .1,
         w * .5, h * .5, Math.max(w, h) * .8);
       g.addColorStop(0, `rgba(${COL_CORE},${FOG_ALPHA})`);
-      g.addColorStop(.6, 'rgba(58,52,68,' + FOG_ALPHA + ')');
+      g.addColorStop(.6, 'rgba(130,120,140,' + FOG_ALPHA + ')');
       g.addColorStop(1, `rgba(${COL_EDGE},${FOG_ALPHA})`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
       // 2. Deux voiles de bruit qui dérivent en sens opposés
       ctx.globalCompositeOperation = 'multiply';
-      this._tile(ctx, this.tex1, this.o1, this.o1 * 0.6, 0.38);
-      this._tile(ctx, this.tex2, -this.o2, this.o2 * 0.4, 0.28);
+      this._tile(ctx, this.tex1, this.o1, this.o1 * 0.6, 0.22);
+      this._tile(ctx, this.tex2, -this.o2, this.o2 * 0.4, 0.16);
 
       // 2 bis. Pointe de violet dans les creux
       ctx.globalCompositeOperation = 'overlay';
-      ctx.globalAlpha = 0.10;
+      ctx.globalAlpha = 0.08;
       ctx.fillStyle = '#4A3E5E';
       ctx.fillRect(0, 0, w, h);
       ctx.globalAlpha = 1;
