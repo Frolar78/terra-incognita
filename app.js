@@ -30,9 +30,11 @@
     await P.load();
 
     // Retour d'autorisation Strava ?
+    let authError = null;
     try {
       if (await Strava.handleCallback()) UI.toast('Lié à Strava. Bienvenue, explorateur.');
     } catch (e) {
+      authError = e.message;
       UI.toast('Connexion Strava refusée : ' + e.message, 7000);
     }
 
@@ -40,10 +42,40 @@
       UI.hideLoading();
       UI.showConnect(true);
       document.getElementById('btn-connect').onclick = () => Strava.authorize();
+      showConnectDiag(authError);
       return;
     }
+
     UI.showConnect(false);
     await startMap();
+  }
+
+  // Auto-diagnostic affiché sous le bouton de liaison :
+  // 1) erreur du dernier échange de code, si elle existe ;
+  // 2) sinon, test de joignabilité du Worker (révèle un ALLOWED_ORIGIN
+  //    mal réglé, l'erreur la plus fréquente).
+  async function showConnectDiag(authError) {
+    const el = document.getElementById('connect-diag');
+    const show = (msg) => { el.textContent = msg; el.classList.remove('hidden'); };
+    if (authError) {
+      show('La liaison a échoué : ' + authError);
+      return;
+    }
+    try {
+      const r = await fetch(C.WORKER_URL + '/strava/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (r.status === 400) return; // Worker joignable, CORS correct : rien à signaler
+      show('Le Worker répond mais de façon inattendue (HTTP ' + r.status +
+        ') : ' + (await r.text()).slice(0, 160));
+    } catch (e) {
+      show('Ton site ne parvient pas à joindre le Worker (' + e.message + '). ' +
+        'Cause quasi certaine : dans Cloudflare → ton Worker → Settings → Variables, ' +
+        'ALLOWED_ORIGIN doit valoir EXACTEMENT ' + location.origin +
+        ' — sans « /terra-incognita » ni « / » final — puis redéploie le Worker.');
+    }
   }
 
   // ==========================================================

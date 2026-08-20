@@ -163,6 +163,14 @@
 #connect h1 { font-size: 1.8rem; margin-bottom: 4px; }
 #connect .devise { font-family: var(--etiquette); letter-spacing: .25em; color: var(--sang); }
 #connect p { line-height: 1.5; }
+#connect .diag {
+  margin-top: 14px; padding: 9px 12px;
+  font-size: .88rem; font-style: italic; line-height: 1.45;
+  color: var(--sang); text-align: left;
+  border-left: 3px solid var(--sang);
+  background: rgba(122,46,43,.08);
+  word-break: break-word;
+}
 
 @media (prefers-reduced-motion: reduce) {
   #loading { transition: opacity .3s; }
