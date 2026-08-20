@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Terra Incognita — nouvelle direction</title>
+<style>
+@font-face { font-family:'Cinzel'; src:url('cinzel.woff2') format('woff2'); font-display:swap; }
+@font-face { font-family:'Inter'; src:url('inter-400.woff2') format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('inter-500.woff2') format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Inter'; src:url('inter-600.woff2') format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'IM Fell'; src:url('imfell.woff2') format('woff2'); font-display:swap; }
+
+/* ─────────── Jetons ───────────
+   Le parchemin ne vit plus que dans la CARTE.
+   L'interface est de l'obsidienne fumée : elle flotte au-dessus
+   du sujet au lieu de le recouvrir. */
+:root {
+  --obs-900:#0E0C10;  --obs-800:#16131A;  --obs-700:#1E1A24;
+  --voile: rgba(20,17,26,.72);
+  --os:    #ECE4D4;   --os-2:#A99E8C;     --os-3:#6E6659;
+  --or:    #C9A227;   --or-clair:#E8C766;
+  --sang:  #9B3A33;
+  --trait: rgba(201,162,39,.22);
+  --r: 10px;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 40px;
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  margin:0; background:var(--obs-900); color:var(--os);
+  font-family:'Inter',system-ui,sans-serif; font-size:15px; line-height:1.5;
+  padding-bottom:96px;
+}
+.faux-carte {
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 60% 45% at 30% 25%, rgba(180,168,140,.30), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 75% 70%, rgba(150,140,120,.22), transparent 70%),
+    linear-gradient(160deg,#2A2530,#191621 60%,#121016);
+}
+.faux-carte::after {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse 75% 60% at 50% 45%, transparent 45%, rgba(10,8,14,.75));
+}
+.page { position:relative; z-index:1; }
+
+/* ─────────── En-tête de progression ───────────
+   Plus de médaillon-badge en relief : un chiffre, une ligne,
+   et la respiration autour. */
+.entete {
+  display:flex; align-items:center; gap:var(--e3);
+  padding:calc(var(--e4) + env(safe-area-inset-top)) var(--e4) var(--e3);
+}
+.niveau { display:flex; align-items:baseline; gap:6px; }
+.niveau b {
+  font-family:'Cinzel',serif; font-weight:400; font-size:34px;
+  line-height:1; color:var(--os); letter-spacing:.01em;
+}
+.niveau span {
+  font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--os-3);
+}
+.prog { flex:1; min-width:0; }
+.prog-h {
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--os-2); margin-bottom:7px;
+}
+.prog-h em { font-style:normal; color:var(--os-3); font-variant-numeric:tabular-nums; }
+.rail { height:2px; background:rgba(236,228,212,.12); position:relative; }
+.rail i {
+  position:absolute; inset:0 auto 0 0; width:76%;
+  background:linear-gradient(90deg,var(--or),var(--or-clair));
+  box-shadow:0 0 10px rgba(232,199,102,.45);
+}
+.france {
+  text-align:right;
+}
+.france b {
+  display:block; font-family:'Cinzel',serif; font-weight:400;
+  font-size:20px; line-height:1; color:var(--or-clair);
+  font-variant-numeric:tabular-nums;
+}
+.france span {
+  font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--os-3);
+}
+
+/* ─────────── Cartouche de contrée ───────────
+   Verre fumé, un seul filet, aucun ornement d'angle. */
+.contree {
+  margin:var(--e5) var(--e4) 0; padding:var(--e3) var(--e3) 14px;
+  background:var(--voile); backdrop-filter:blur(16px) saturate(1.1);
+  -webkit-backdrop-filter:blur(16px) saturate(1.1);
+  border:1px solid var(--trait); border-radius:var(--r);
+}
+.contree-h { display:flex; justify-content:space-between; align-items:baseline; }
+.contree-nom {
+  font-family:'Cinzel',serif; font-weight:400; font-size:19px; letter-spacing:.03em;
+}
+.contree-pct { font-size:13px; color:var(--or-clair); font-variant-numeric:tabular-nums; }
+.contree-statut {
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--os-3); margin:3px 0 12px;
+}
+.jalons { display:flex; gap:3px; }
+.jalons i { flex:1; height:3px; background:rgba(236,228,212,.10); }
+.jalons i.on { background:var(--or); }
+
+/* ─────────── Section ─────────── */
+.section { padding:var(--e5) var(--e4) 0; }
+.section-h {
+  display:flex; align-items:center; gap:var(--e3);
+  margin-bottom:var(--e3);
+}
+.section-h h2 {
+  margin:0; font-family:'Cinzel',serif; font-weight:400;
+  font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:var(--os);
+}
+.section-h .filet { flex:1; height:1px; background:var(--trait); }
+.section-h .cpt { font-size:12px; color:var(--os-3); font-variant-numeric:tabular-nums; }
+
+/* ─────────── Cartes du Codex ───────────
+   La rareté n'est plus une barre colorée collée en haut :
+   c'est une pastille discrète et un liseré de bord. */
+.grille { display:grid; grid-template-columns:1fr 1fr; gap:var(--e2); }
+.lieu {
+  position:relative; padding:var(--e3) 14px 14px;
+  background:var(--voile); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(236,228,212,.09); border-radius:var(--r);
+  overflow:hidden; transition:border-color .2s, transform .2s;
+}
+.lieu::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:var(--rc);
+}
+.lieu:active { transform:scale(.985); }
+.lieu .ic { width:22px; height:22px; color:var(--rc); opacity:.95; }
+.lieu .ic svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.4; }
+.lieu h3 {
+  margin:12px 0 0; font-family:'Cinzel',serif; font-weight:400;
+  font-size:14.5px; line-height:1.3; letter-spacing:.01em; color:var(--os);
+}
+.lieu .meta {
+  margin-top:8px; display:flex; align-items:center; gap:7px;
+  font-size:11px; color:var(--os-3);
+}
+.lieu .rar {
+  font-size:9.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--rc); font-weight:500;
+}
+.pt { width:3px; height:3px; border-radius:50%; background:var(--os-3); }
+
+/* ─────────── Hauts faits ─────────── */
+.fait {
+  display:flex; gap:14px; align-items:center; padding:14px var(--e3);
+  background:var(--voile); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(236,228,212,.08); border-radius:var(--r);
+  margin-bottom:var(--e2);
+}
+.fait.acquis { border-color:rgba(201,162,39,.34); }
+.fait .sc {
+  flex:0 0 34px; height:34px; display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(236,228,212,.14); border-radius:50%;
+  color:var(--os-3);
+}
+.fait.acquis .sc { border-color:var(--or); color:var(--or-clair); }
+.fait .sc svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.5; }
+.fait .co { flex:1; min-width:0; }
+.fait .ti { font-size:14px; font-weight:500; color:var(--os); }
+.fait.acquis .ti { color:var(--or-clair); }
+.fait .cd { font-size:12px; color:var(--os-3); margin-top:1px; }
+.fait .jr { height:2px; background:rgba(236,228,212,.10); margin-top:9px; }
+.fait .jr i { display:block; height:100%; background:var(--or); }
+.fait .xp {
+  font-size:11px; color:var(--os-3); font-variant-numeric:tabular-nums;
+  letter-spacing:.04em;
+}
+
+/* ─────────── Boutons ───────────
+   Plus aucun dégradé, plus aucun biseau. */
+.actions { display:flex; gap:var(--e2); padding:var(--e4); }
+.btn {
+  flex:1; padding:13px 18px; border-radius:8px; border:1px solid var(--or);
+  background:transparent; color:var(--or-clair);
+  font-family:'Inter',sans-serif; font-size:13.5px; font-weight:500;
+  letter-spacing:.06em; cursor:pointer; transition:background .18s;
+}
+.btn:active { background:rgba(201,162,39,.14); }
+.btn.plein { background:var(--or); border-color:var(--or); color:#17130A; font-weight:600; }
+.btn.plein:active { background:var(--or-clair); }
+.btn.discret { border-color:rgba(236,228,212,.18); color:var(--os-2); }
+
+/* ─────────── Barre d'onglets ───────────
+   Icônes dessinées, libellés en minuscules, hauteur respirable. */
+.onglets {
+  position:fixed; left:0; right:0; bottom:0; z-index:5;
+  display:flex; padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(14,12,16,.86); backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(236,228,212,.08);
+}
+.ong {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+  background:none; border:none; padding:6px 0;
+  color:var(--os-3); font-family:'Inter',sans-serif; font-size:10.5px;
+  letter-spacing:.02em; cursor:pointer;
+}
+.ong svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.5;
+  stroke-linecap:round; stroke-linejoin:round; }
+.ong.on { color:var(--or-clair); }
+
+.note {
+  margin:var(--e5) var(--e4) 0; padding:var(--e3);
+  border-left:2px solid var(--or); background:rgba(201,162,39,.07);
+  font-size:13px; color:var(--os-2); border-radius:0 6px 6px 0;
+}
+.note b { color:var(--os); font-weight:500; }
+.sign { font-family:'IM Fell',serif; color:var(--os-3); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="faux-carte"></div>
+<div class="page">
+
+  <div class="entete">
+    <div class="niveau"><b>15</b><span>rang</span></div>
+    <div class="prog">
+      <div class="prog-h"><span>Explorateur</span><em>13 245 / 17 343</em></div>
+      <div class="rail"><i></i></div>
+    </div>
+    <div class="france"><b>0,12 %</b><span>France</span></div>
+  </div>
+
+  <div class="contree">
+    <div class="contree-h">
+      <div class="contree-nom">Alpes-Maritimes</div>
+      <div class="contree-pct">3,4 %</div>
+    </div>
+    <div class="contree-statut">Territoire arpenté</div>
+    <div class="jalons">
+      <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i>
+      <i></i><i></i><i></i><i></i><i></i>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><h2>Codex</h2><div class="filet"></div><div class="cpt">246</div></div>
+    <div class="grille">
+      <div class="lieu" style="--rc:#D8B03C">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.4 4.7.4-3.6 3 1.1 4.6L12 13l-4 2.4 1.1-4.6-3.6-3 4.7-.4z"/><path d="M5 19h14"/></svg></div>
+        <h3>Cathédrale Notre-Dame de Paris</h3>
+        <div class="meta"><span class="rar">Légendaire</span><i class="pt"></i><span>Sanctuaire</span></div>
+      </div>
+      <div class="lieu" style="--rc:#8E6BA8">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M5 21V9l3-2 4 2 4-2 3 2v12z"/><path d="M9 21v-5h6v5"/><path d="M5 9V5h3v2M16 7V5h3v4"/></svg></div>
+        <h3>Palais princier de Monaco</h3>
+        <div class="meta"><span class="rar">Épique</span><i class="pt"></i><span>Forteresse</span></div>
+      </div>
+      <div class="lieu" style="--rc:#4E7FA8">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 19l6-11 4 6 2.5-3.5L21 19z"/><path d="M9 8l1.5 2.5"/></svg></div>
+        <h3>La Tête de Chien</h3>
+        <div class="meta"><span class="rar">Rare</span><i class="pt"></i><span>Cime · 550 m</span></div>
+      </div>
+      <div class="lieu" style="--rc:#6E8A55">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 8h10"/><path d="M6 21h12"/></svg></div>
+        <h3>Chapelle Saint-Jacques</h3>
+        <div class="meta"><span class="rar">Peu commun</span><i class="pt"></i><span>Sanctuaire</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><h2>Hauts faits</h2><div class="filet"></div><div class="cpt">18 / 34</div></div>
+    <div class="fait acquis">
+      <div class="sc"><svg viewBox="0 0 24 24"><path d="M12 3l2.1 5.2 5.6.4-4.3 3.6 1.4 5.4L12 14.7 7.2 17.6l1.4-5.4-4.3-3.6 5.6-.4z"/></svg></div>
+      <div class="co">
+        <div class="ti">Trouvaille légendaire</div>
+        <div class="cd">Accompli le 20 août 2026</div>
+      </div>
+      <div class="xp">1 000</div>
+    </div>
+    <div class="fait">
+      <div class="sc"><svg viewBox="0 0 24 24"><path d="M4 20V6l8-3 8 3v14"/><path d="M9 20v-6h6v6"/></svg></div>
+      <div class="co">
+        <div class="ti">Département conquis</div>
+        <div class="cd">Porter un département à 20 %</div>
+        <div class="jr"><i style="width:17%"></i></div>
+      </div>
+      <div class="xp">600</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn plein">Synchroniser</button>
+    <button class="btn">Rejouer le récit</button>
+  </div>
+  <div class="actions" style="padding-top:0">
+    <button class="btn discret">Exporter</button>
+    <button class="btn discret">Importer</button>
+  </div>
+
+  <div class="note">
+    <b>Ce qui change.</b> Le parchemin ne vit plus que dans la carte — l'interface
+    passe en verre fumé et flotte au-dessus d'elle. Une seule police historique
+    (Cinzel), réservée aux titres et aux nombres ; le reste en Inter, pour la
+    lisibilité. Boutons plats, un seul filet, aucun coin ornementé. Icônes dessinées
+    au trait plutôt que des caractères. Et de l'air : les marges doublent.<br><br>
+    <span class="sign">Hic sunt dracones</span> — l'IM Fell reste, mais seulement
+    sur la carte, là où il a du sens.
+  </div>
+</div>
+
+<nav class="onglets">
+  <button class="ong on">
+    <svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
+    Carte</button>
+  <button class="ong">
+    <svg viewBox="0 0 24 24"><path d="M5 4h13v16H5z"/><path d="M8 4v16M11 9h5M11 13h5"/></svg>
+    Codex</button>
+  <button class="ong">
+    <svg viewBox="0 0 24 24"><path d="M17 4l3 3-10 10-4 1 1-4z"/><path d="M4 21h16"/></svg>
+    Journal</button>
+  <button class="ong">
+    <svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4M10 20h4M12 14v6"/></svg>
+    Hauts faits</button>
+  <button class="ong">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+    Réglages</button>
+</nav>
+</body>
+</html>
