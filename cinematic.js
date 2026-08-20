@@ -62,28 +62,60 @@
 
     const totalCells = cells.length;
 
-    // Cadence : un battement par MOIS, pas par sortie. C'est ce qui
-    // donne un récit qui respire au lieu d'un diaporama saccadé.
-    const mois = [];
-    let courant = null;
+    // Cadence : une scène = un mois DANS UNE MÊME RÉGION. Un mois où
+    // tu as couru à Paris puis à Nice donne deux scènes, au lieu d'un
+    // point moyen au milieu de nulle part.
+    const h3lib = window.h3;
+    const latlng = (h3id) => {
+      try { return h3lib.cellToLatLng(h3id); } catch (e) { return null; }
+    };
+
+    const scenes = [];
+    let cour = null;
     for (const e of etapes) {
       const cle = e.date.slice(0, 7);
-      if (!courant || courant.cle !== cle) {
-        courant = { cle, date: e.date, sorties: [], cells: [], pois: [], lignes: [] };
-        mois.push(courant);
+      const loin = cour && cour.centre && e.centre &&
+        Math.hypot(e.centre[0] - cour.centre[0], e.centre[1] - cour.centre[1]) > 0.8;
+      if (!cour || cour.cle !== cle || loin) {
+        cour = { cle, date: e.date, sorties: [], cells: [], pois: [],
+          lignes: [], centre: e.centre || null, n: 0 };
+        scenes.push(cour);
       }
-      courant.sorties.push(e);
-      courant.cells.push.apply(courant.cells, e.cells);
-      courant.pois.push.apply(courant.pois, e.pois);
-      if (e.ligne.length > 1) courant.lignes.push(e.ligne);
+      cour.sorties.push(e);
+      cour.cells.push.apply(cour.cells, e.cells);
+      cour.pois.push.apply(cour.pois, e.pois);
+      if (e.ligne.length > 1) cour.lignes.push(e.ligne);
       if (e.centre) {
-        courant.centre = courant.centre
-          ? [(courant.centre[0] + e.centre[0]) / 2, (courant.centre[1] + e.centre[1]) / 2]
+        // moyenne pondérée honnête (et non un glissement à deux termes)
+        cour.n++;
+        cour.centre = cour.centre
+          ? [cour.centre[0] + (e.centre[0] - cour.centre[0]) / cour.n,
+             cour.centre[1] + (e.centre[1] - cour.centre[1]) / cour.n]
           : e.centre;
       }
     }
 
-    return { etapes, mois, totalCells };
+    // Cadre de chaque scène : l'emprise RÉELLE des cellules révélées,
+    // pour que la caméra montre toujours quelque chose qui s'ouvre.
+    for (const s of scenes) {
+      let x1 = 180, y1 = 90, x2 = -180, y2 = -90, n = 0;
+      const pas = Math.max(1, Math.floor(s.cells.length / 400));
+      for (let i = 0; i < s.cells.length; i += pas) {
+        const ll = latlng(s.cells[i]);
+        if (!ll) continue;
+        n++;
+        if (ll[1] < x1) x1 = ll[1]; if (ll[1] > x2) x2 = ll[1];
+        if (ll[0] < y1) y1 = ll[0]; if (ll[0] > y2) y2 = ll[0];
+      }
+      if (n) {
+        const mx = Math.max(0.012, (x2 - x1) * 0.25);
+        const my = Math.max(0.010, (y2 - y1) * 0.25);
+        s.bbox = [[x1 - mx, y1 - my], [x2 + mx, y2 + my]];
+        s.centre = [(x1 + x2) / 2, (y1 + y2) / 2];
+      }
+    }
+
+    return { etapes, scenes, totalCells };
   }
 
   // ----------------------------------------------------------
@@ -127,12 +159,12 @@
       $('cine-pct').textContent = '';
 
       const data = await preparer();
-      if (!data || !data.mois.length) {
+      if (!data || !data.scenes.length) {
         $('cine-date').textContent = 'Aucune chevauchée à raconter pour l\u2019instant.';
         await attendre(2200);
         return;
       }
-      const { mois, totalCells } = data;
+      const { scenes, totalCells } = data;
 
       // La carte repart vierge : brume totale, aucun tracé
       fog.setCells([]);
@@ -144,50 +176,59 @@
       await attendre(1600);
       if (annule) return;
 
-      // Un battement par mois : voyage → écriture → déchirure.
-      // La déchirure dure ~1,8 s à elle seule : on la déduit du budget
-      // pour que le récit tienne dans la durée visée.
-      const respiration = Math.max(250,
-        Math.min(2200, DUREE_CIBLE / mois.length - 1800));
+      // Budget : la déchirure dure ~1,8 s, le voyage jusqu'à ~2 s.
+      const respiration = Math.max(300,
+        Math.min(2000, DUREE_CIBLE / scenes.length - 2600));
       const anciennes = [];
-      let cellsVues = 0, dernierCentre = null;
+      let cellsVues = 0, dernierCadre = null;
 
-      for (let i = 0; i < mois.length; i++) {
+      for (let i = 0; i < scenes.length; i++) {
         if (annule) break;
-        const m = mois[i];
+        const s = scenes[i];
 
-        const nom = moisFr(m.date);
+        const nom = moisFr(s.date);
         $('cine-date').textContent = nom.charAt(0).toUpperCase() + nom.slice(1);
-        $('cine-titre').textContent = m.sorties.length > 1
-          ? m.sorties.length + ' chevauchées'
-          : (m.sorties[0].nom || '');
+        $('cine-titre').textContent = s.sorties.length > 1
+          ? s.sorties.length + ' chevauchées'
+          : (s.sorties[0].nom || '');
 
-        // 1. La caméra se déplace lentement, et attend d'être arrivée
-        if (m.centre) {
-          const d = dernierCentre
-            ? Math.hypot(m.centre[0] - dernierCentre[0], m.centre[1] - dernierCentre[1])
-            : 99;
-          if (d > 0.12) {
-            const duree = Math.min(2200, 850 + d * 230);
-            map.easeTo({ center: m.centre, zoom: d > 3 ? 8.2 : 9.1,
-              duration: duree, easing: (t) => t * (2 - t) });
-            dernierCentre = m.centre;
-            await attendre(Math.min(duree, respiration * 0.6));
+        // 1. La caméra cadre EXACTEMENT ce qui va s'ouvrir, et on
+        //    attend qu'elle soit arrivée : rien ne se révèle en vol.
+        if (s.bbox) {
+          const bouge = !dernierCadre ||
+            Math.hypot(s.centre[0] - dernierCadre[0], s.centre[1] - dernierCadre[1]) > 0.25;
+          if (bouge) {
+            const d = dernierCadre
+              ? Math.hypot(s.centre[0] - dernierCadre[0], s.centre[1] - dernierCadre[1])
+              : 8;
+            const duree = Math.min(2000, 800 + d * 190);
+            await new Promise((res) => {
+              let fini = false;
+              const fin = () => { if (!fini) { fini = true; res(); } };
+              map.once('moveend', fin);
+              setTimeout(fin, duree + 700); // filet si moveend n'arrive pas
+              map.fitBounds(s.bbox, {
+                padding: { top: 110, bottom: 150, left: 40, right: 40 },
+                maxZoom: 11.5, duration: duree, essential: true,
+                easing: (t) => t * (2 - t),
+              });
+            });
+            dernierCadre = s.centre;
             if (annule) break;
           }
         }
 
-        // 2. Les tracés du mois s'écrivent, les anciens se ternissent
-        if (m.lignes.length) {
-          majTraces(anciennes, m.lignes);
-          for (const l of m.lignes) anciennes.push(l);
+        // 2. Les tracés de la scène s'écrivent, les anciens se ternissent
+        if (s.lignes.length) {
+          majTraces(anciennes, s.lignes);
+          for (const l of s.lignes) anciennes.push(l);
         }
 
-        // 3. Le voile se déchire pour de bon (dissipation animée)
-        if (m.cells.length) {
-          const neuves = new Set(m.cells);
+        // 3. Le voile se déchire, caméra immobile
+        if (s.cells.length) {
+          const neuves = new Set(s.cells);
           fog.addCells(neuves);
-          cellsVues += m.cells.length;
+          cellsVues += s.cells.length;
           await new Promise((res) => {
             let fini = false;
             const fin = () => { if (!fini) { fini = true; res(); } };
@@ -197,22 +238,22 @@
           if (annule) break;
         }
 
-        // 4. Les hauts lieux du mois se signalent
-        if (m.pois.length) {
-          const p = m.pois.sort((a, b) => (b.rarete || 0) - (a.rarete || 0))[0];
+        // 4. Les hauts lieux de la scène se signalent
+        if (s.pois.length) {
+          const p = s.pois.slice().sort((a, b) => (b.rarete || 0) - (a.rarete || 0))[0];
           const el = $('cine-lieu');
           el.textContent = '✦ ' + p.name +
-            (m.pois.length > 1 ? '  (+' + (m.pois.length - 1) + ')' : '');
+            (s.pois.length > 1 ? '  (+' + (s.pois.length - 1) + ')' : '');
           el.classList.remove('hidden');
           setTimeout(() => el.classList.add('hidden'), 2200);
         }
 
-        const k = (i + 1) / mois.length;
+        const k = (i + 1) / scenes.length;
         $('cine-jauge').style.width = (k * 100).toFixed(1) + '%';
         $('cine-pct').textContent = window.TI.Progress.formatPct(
           (cellsVues / window.TI.Progress.counts.total) * 100) + ' de la France';
 
-        await attendre(respiration * 0.4);
+        await attendre(respiration);
       }
 
       // Épilogue : recul sur le royaume entier
@@ -295,5 +336,5 @@
 
   async function dejaVue() { return !!(await DB.metaGet('cineVue', false)); }
 
-  window.TI.Cine = { init, jouer, dejaVue };
+  window.TI.Cine = { init, jouer, dejaVue, enCours: () => running };
 })();

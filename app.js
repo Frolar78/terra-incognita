@@ -246,7 +246,7 @@
         // d'une carte déjà peuplée — puis le repérage des lieux.
         if (!(await window.TI.Cine.dejaVue())) await window.TI.Cine.jouer();
         await checkFaits();
-        runPoiScan();
+        runPoiScan(); // après le récit, jamais pendant
       }
     });
 
@@ -366,6 +366,8 @@
   let poiScanRunning = false;
   async function runPoiScan() {
     if (poiScanRunning) return;
+    // Jamais pendant la cinématique : les deux se disputeraient la carte
+    if (window.TI.Cine && window.TI.Cine.enCours()) return;
     poiScanRunning = true;
     try {
       const found = await window.TI.POI.scanPending((msg) => UI.syncBanner(msg));
@@ -577,6 +579,11 @@
     };
 
     $('btn-cine').onclick = async () => {
+      if (poiScanRunning) {
+        UI.toast('Le repérage des hauts lieux est en cours — laisse-le finir, ' +
+          'sinon les deux se disputent la carte.', 6000);
+        return;
+      }
       try { await window.TI.Cine.jouer(); }
       catch (e) { UI.toast('Cinématique impossible : ' + e.message, 7000); }
     };
