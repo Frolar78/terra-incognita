@@ -19,8 +19,8 @@
 
     async load() {
       const [d, c] = await Promise.all([
-        fetch('data/departements.geojson').then((r) => r.json()),
-        fetch('data/dept-cell-counts.json').then((r) => r.json()),
+        fetch('departements.geojson').then((r) => r.json()),
+        fetch('dept-cell-counts.json').then((r) => r.json()),
       ]);
       P.depts = d; P.counts = c;
       for (const f of d.features) {

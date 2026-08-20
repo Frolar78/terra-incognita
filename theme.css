@@ -6,22 +6,22 @@
 
 @font-face {
   font-family: 'Cinzel';
-  src: url('../assets/fonts/cinzel.woff2') format('woff2');
+  src: url('cinzel.woff2') format('woff2');
   font-weight: 400 900; font-display: swap;
 }
 @font-face {
   font-family: 'IM Fell English SC';
-  src: url('../assets/fonts/imfell.woff2') format('woff2');
+  src: url('imfell.woff2') format('woff2');
   font-weight: 400; font-display: swap;
 }
 @font-face {
   font-family: 'EB Garamond';
-  src: url('../assets/fonts/garamond.woff2') format('woff2');
+  src: url('garamond.woff2') format('woff2');
   font-weight: 400 800; font-display: swap;
 }
 @font-face {
   font-family: 'EB Garamond';
-  src: url('../assets/fonts/garamondit.woff2') format('woff2');
+  src: url('garamondit.woff2') format('woff2');
   font-weight: 400 800; font-style: italic; font-display: swap;
 }
 
@@ -58,7 +58,7 @@ h1, h2, h3 { font-family: var(--titre); font-weight: 700; letter-spacing: .06em;
   position: relative;
   background:
     linear-gradient(rgba(234,224,198,.96), rgba(211,194,158,.96)),
-    url('../assets/textures/parchemin.png');
+    url('parchemin.png');
   background-size: auto, 512px;
   border: 1.5px solid var(--or);
   box-shadow:

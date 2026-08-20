@@ -24,7 +24,7 @@
       return;
     }
     if (C.STRAVA_CLIENT_ID === 'REMPLACE_MOI' || C.WORKER_URL === 'REMPLACE_MOI') {
-      UI.showFatal('Configuration incomplète : renseigne STRAVA_CLIENT_ID et WORKER_URL dans js/config.js (voir README).');
+      UI.showFatal('Configuration incomplète : renseigne STRAVA_CLIENT_ID et WORKER_URL dans config.js (voir README).');
       return;
     }
     await P.load();
@@ -92,10 +92,10 @@
             tileSize: 256, encoding: 'terrarium', maxzoom: 15,
             attribution: 'Relief : Mapzen/AWS Terrain Tiles · Données : Natural Earth',
           },
-          mer: { type: 'geojson', data: 'data/mer.geojson' },
-          lacs: { type: 'geojson', data: 'data/lacs.geojson' },
-          fleuves: { type: 'geojson', data: 'data/fleuves.geojson' },
-          depts: { type: 'geojson', data: 'data/departements.geojson', promoteId: 'code' },
+          mer: { type: 'geojson', data: 'mer.geojson' },
+          lacs: { type: 'geojson', data: 'lacs.geojson' },
+          fleuves: { type: 'geojson', data: 'fleuves.geojson' },
+          depts: { type: 'geojson', data: 'departements.geojson', promoteId: 'code' },
           traces: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
         layers: [

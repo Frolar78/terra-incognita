@@ -48,8 +48,8 @@
         i.onerror = rej; i.src = src;
       });
       [this.tex1, this.tex2] = await Promise.all([
-        load('assets/textures/brume1.png'),
-        load('assets/textures/brume2.png'),
+        load('brume1.png'),
+        load('brume2.png'),
       ]);
       this._resize();
       this.map.addSource('fog', {
