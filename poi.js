@@ -19,15 +19,30 @@
     'https://overpass.kumi.systems/api/interpreter',
   ];
 
+  // Icônes dessinées au trait — un caractère typographique employé
+  // comme pictogramme trahit toujours l'amateurisme.
+  const ico = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
   const TYPES = {
-    forteresse: { nom: 'Forteresse',   glyphe: '♜' },
-    tour:       { nom: 'Tour de guet', glyphe: '♖' },
-    sanctuaire: { nom: 'Sanctuaire',   glyphe: '✠' },
-    vestiges:   { nom: 'Vestiges',     glyphe: '⚱\uFE0E' },
-    cime:       { nom: 'Cime',         glyphe: '▲' },
-    caverne:    { nom: 'Caverne',      glyphe: '∩' },
-    fanal:      { nom: 'Fanal',        glyphe: '☼\uFE0E' },
-    cascade:    { nom: 'Cascade',      glyphe: '≋' },
+    forteresse: { nom: 'Forteresse', glyphe: ico(
+      '<path d="M5 21V9l3-2 4 2 4-2 3 2v12z"/><path d="M9 21v-5h6v5"/>' +
+      '<path d="M5 9V5h3v2M16 7V5h3v4"/>') },
+    tour: { nom: 'Tour de guet', glyphe: ico(
+      '<path d="M8 21V8l4-4 4 4v13z"/><path d="M8 8h8"/><path d="M11 21v-5h2v5"/>' +
+      '<path d="M12 4V2"/>') },
+    sanctuaire: { nom: 'Sanctuaire', glyphe: ico(
+      '<path d="M12 3v18M7 8h10"/><path d="M6 21h12"/>') },
+    vestiges: { nom: 'Vestiges', glyphe: ico(
+      '<path d="M4 21V10l3 2V7l4 3V6l4 4V9l5 3v9z"/><path d="M9 21v-4M15 21v-3"/>') },
+    cime: { nom: 'Cime', glyphe: ico(
+      '<path d="M3 19l6-11 4 6 2.5-3.5L21 19z"/><path d="M9 8l1.5 2.5"/>') },
+    caverne: { nom: 'Caverne', glyphe: ico(
+      '<path d="M3 21V13a9 9 0 0118 0v8"/><path d="M9 21v-4a3 3 0 016 0v4"/>') },
+    fanal: { nom: 'Fanal', glyphe: ico(
+      '<path d="M9 9h6l1 12H8z"/><path d="M10 9V5h4v4"/><path d="M12 2v1"/>' +
+      '<path d="M4 7l2 1M20 7l-2 1"/>') },
+    cascade: { nom: 'Cascade', glyphe: ico(
+      '<path d="M4 4c3 0 3 3 6 3s3-3 6-3 4 2 4 2"/>' +
+      '<path d="M7 9v11M12 9v11M17 9v11"/>') },
   };
   const RARETES = ['Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'];
   const RARETE_XP = [20, 40, 80, 150, 300];

@@ -9,7 +9,7 @@
   const DB = window.TI.DB;
   const $ = (id) => document.getElementById(id);
 
-  const COULEURS = ['#8A7F6D', '#6B7F4F', '#2E4A66', '#6D3A5D', '#C9A227'];
+  const COULEURS = ['#8C8371', '#6E8A55', '#4E7FA8', '#8E6BA8', '#D8B03C'];
   const ZOOM_MIN = 8.4;   // en deçà, les médaillons se marchent dessus
 
   let map = null;
@@ -50,6 +50,7 @@
       par.map((n, i) => n ?
         `<span class="cx-pastille" style="--rc:${COULEURS[i]}" ` +
         `title="${window.TI.POI.RARETES[i]}">${n}</span>` : '').join('');
+    el.querySelectorAll('.cx-total').forEach(() => {});
   }
 
   function renderFiltres() {
@@ -61,7 +62,7 @@
     let h = `<button class="cx-filtre${filtre === 'tous' ? ' actif' : ''}" data-f="tous">Tous</button>`;
     for (const t of types) {
       h += `<button class="cx-filtre${filtre === t ? ' actif' : ''}" data-f="${t}">` +
-        `${T[t].glyphe} ${T[t].nom}</button>`;
+        `${T[t].glyphe}<span>${T[t].nom}</span></button>`;
     }
     el.innerHTML = h;
     el.querySelectorAll('.cx-filtre').forEach((b) =>
@@ -78,8 +79,11 @@
       <div class="cx-carte" data-id="${p.id}" style="--rc:${COULEURS[p.rarete]}">
         <div class="cx-glyphe">${T[p.type].glyphe}</div>
         <div class="cx-nom">${p.name}</div>
-        <div class="cx-type">${T[p.type].nom}</div>
-        <div class="cx-rarete">${R[p.rarete]}</div>
+        <div class="cx-meta">
+          <span class="cx-rarete">${R[p.rarete]}</span>
+          <i class="cx-pt"></i><span>${T[p.type].nom}${
+            p.ele != null ? ' · ' + Math.round(p.ele) + ' m' : ''}</span>
+        </div>
       </div>`).join('');
     g.querySelectorAll('.cx-carte').forEach((c) =>
       c.addEventListener('click', () => {
@@ -101,7 +105,7 @@
       const el = document.createElement('div');
       el.className = 'poi-marker';
       el.style.setProperty('--rc', COULEURS[p.rarete]);
-      el.innerHTML = `<span>${T[p.type].glyphe}</span>`;
+      el.innerHTML = T[p.type].glyphe;
       el.title = p.name;
       el.addEventListener('click', (e) => { e.stopPropagation(); openFiche(p); });
       const mk = new maplibregl.Marker({ element: el, anchor: 'center' })
@@ -119,7 +123,7 @@
     if (!f) return;
     const T = window.TI.POI.TYPES, R = window.TI.POI.RARETES;
     f.style.setProperty('--rc', COULEURS[p.rarete]);
-    f.querySelector('.fiche-glyphe').textContent = T[p.type].glyphe;
+    f.querySelector('.fiche-glyphe').innerHTML = T[p.type].glyphe;
     f.querySelector('.fiche-nom').textContent = p.name;
     const sous = [T[p.type].nom, R[p.rarete]];
     if (p.deptNom) sous.push(p.deptNom);

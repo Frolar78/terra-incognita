@@ -1,178 +1,172 @@
 /* ============================================================
-   Carte, HUD et ornements
+   map.css — la carte et ce qui flotte au-dessus
+   Le parchemin, le grain et l'encre vivent ICI et nulle part
+   ailleurs. Tout le reste est de l'obsidienne fumée.
    ============================================================ */
 
-#map { position: fixed; inset: 0; }
-#map canvas { outline: none; }
+#map { position:fixed; inset:0; }
+#map canvas { outline:none; }
 
-/* Grain de parchemin sur toute la carte + vignettage sombre,
-   bords légèrement brûlés */
+/* Grain de parchemin et vignettage : la carte, pas l'interface */
 #paper {
-  position: fixed; inset: 0; z-index: 5; pointer-events: none;
-  background: url('parchemin.png');
-  background-size: 512px;
-  mix-blend-mode: multiply;
-  opacity: .5;
+  position:fixed; inset:0; z-index:5; pointer-events:none;
+  background:url('parchemin.png'); background-size:512px;
+  mix-blend-mode:multiply; opacity:.42;
 }
 #vignette {
-  position: fixed; inset: 0; z-index: 6; pointer-events: none;
-  background: radial-gradient(ellipse at center,
-    transparent 55%, rgba(43,32,22,.28) 82%, rgba(24,17,11,.62) 100%);
-  box-shadow: inset 0 0 42px 8px rgba(30,20,10,.55);
+  position:fixed; inset:0; z-index:6; pointer-events:none;
+  background:radial-gradient(ellipse 78% 62% at center,
+    transparent 48%, rgba(20,16,24,.34) 80%, rgba(12,9,16,.68) 100%);
 }
 
-/* --- HUD haut : sceau de niveau + XP + France ----------------- */
+/* ─────────── Bandeau de progression ───────────
+   Un chiffre, une ligne, de l'air. Plus de médaillon en relief. */
 #hud-top {
-  position: fixed; top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px;
-  z-index: 20; display: flex; align-items: center; gap: 10px;
-  pointer-events: none;
+  position:fixed; top:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; gap:var(--e3);
+  padding:calc(var(--e3) + env(safe-area-inset-top)) var(--e4) var(--e3);
+  background:linear-gradient(rgba(14,12,16,.82), rgba(14,12,16,0));
+  pointer-events:none;
 }
-#seal {
-  width: 66px; height: 66px; flex: none;
-  filter: drop-shadow(0 4px 7px rgba(15,11,8,.65));
+#seal { width:auto; height:auto; overflow:visible; }
+/* Le sceau ornementé devient un simple nombre gravé */
+#seal circle, #seal path, #seal text:not(#seal-level) { display:none; }
+#hud-niveau {
+  display:flex; align-items:baseline; gap:6px; flex:0 0 auto;
 }
-#seal text {
-  font-family: var(--titre); font-weight: 800; font-size: 27px;
-  fill: #EFE6CC;
+#hud-niveau b {
+  font-family:'Cinzel',serif; font-weight:400; font-size:32px; line-height:1;
+  color:var(--os); font-variant-numeric:tabular-nums;
 }
-#hud-mid { flex: 1; min-width: 0; padding-top: 2px; }
+#hud-niveau span {
+  font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--os-3);
+}
+#hud-mid { flex:1; min-width:0; }
 #hud-xp-text {
-  font-family: var(--etiquette); font-size: .8rem; color: #EFE6CC;
-  text-shadow: 0 1px 3px rgba(15,11,8,.95);
-  display: flex; justify-content: space-between; margin-bottom: 3px;
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--os-2); margin-bottom:7px;
 }
-#hud-xp-text b {
-  font-family: var(--titre); font-weight: 700; letter-spacing: .08em;
-  color: var(--or-vif);
+#hud-xp-text b { font-weight:500; }
+#hud-xp-val { color:var(--os-3); font-variant-numeric:tabular-nums; letter-spacing:.04em; }
+.jauge { height:2px; background:rgba(236,228,212,.12); position:relative; overflow:hidden; }
+.jauge > div { height:100%; background:linear-gradient(90deg,var(--or),var(--or-vif));
+  box-shadow:0 0 10px rgba(232,199,102,.45); transition:width .6s ease; }
+.jauge i { display:none; }
+#hud-france-box { text-align:right; flex:0 0 auto; }
+#hud-france {
+  display:block; font-family:'Cinzel',serif; font-size:19px; line-height:1;
+  color:var(--or-vif); font-variant-numeric:tabular-nums;
 }
-#hud-top .jauge { background: rgba(24,20,16,.55); }
-#hud-france-box {
-  flex: none; text-align: center; color: var(--parchemin);
-  text-shadow: 0 1px 3px rgba(20,16,12,.9);
-  pointer-events: none;
+#hud-france-box small {
+  font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--os-3);
 }
-#hud-france { font-family: var(--titre); font-size: 1.05rem; display: block; }
-#hud-france-box small { font-family: var(--etiquette); font-size: .68rem; letter-spacing: .12em; }
 
-/* --- Cartouche du département courant ------------------------- */
+/* ─────────── Cartouche de contrée (haut) ─────────── */
 #hud-dept {
-  position: fixed; left: 12px; right: 12px;
-  bottom: calc(64px + env(safe-area-inset-bottom) + 10px);
-  z-index: 20; padding: 10px 16px 12px;
-  text-align: center;
-  transition: opacity .3s, transform .3s;
+  position:fixed; top:calc(84px + env(safe-area-inset-top)); left:var(--e4);
+  z-index:20; padding:10px 14px 11px; min-width:170px;
+  background:var(--voile); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--trait-os); border-radius:var(--r-s);
+  pointer-events:none; transition:opacity .5s ease;
 }
-#hud-dept.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; display: block !important; }
-#hud-dept-name {
-  font-family: var(--titre); font-size: 1.15rem; letter-spacing: .1em;
-  text-transform: uppercase;
-}
+#hud-dept-name { font-family:'Cinzel',serif; font-size:15px; color:var(--os); }
 #hud-dept-line {
-  font-family: var(--etiquette); font-size: .92rem; color: var(--encre-pale);
-  margin: 2px 0 7px;
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--os-3); margin:2px 0 8px;
 }
-#hud-dept-pct { color: var(--sang); font-weight: 700; }
 
-/* --- Rose des vents + échelle --------------------------------- */
+/* ─────────── Rose des vents ───────────
+   Réduite, désaturée : un repère, pas un bijou. */
 #compass {
-  position: fixed; right: 12px;
-  bottom: calc(64px + env(safe-area-inset-bottom) + 118px);
-  width: 76px; height: 76px; z-index: 18; pointer-events: none;
-  opacity: .95; filter: drop-shadow(0 3px 6px rgba(15,11,8,.5));
+  position:fixed; right:var(--e4); bottom:calc(150px + env(safe-area-inset-bottom));
+  width:44px; height:44px; z-index:18; pointer-events:none; opacity:.5;
+  filter:grayscale(.5);
 }
 
-/* --- Étiquettes calligraphiées des départements --------------- */
-.dept-label {
-  font-family: var(--etiquette);
-  font-size: 13px; letter-spacing: .14em;
-  color: #42341f;
-  text-shadow: 0 0 5px rgba(234,224,198,.85), 0 1px 2px rgba(234,224,198,.85);
-  white-space: nowrap; pointer-events: none;
-  transform: translateY(-4px);
-}
-.dept-label:not(.unknown)::after {
-  content: ''; display: block; height: 5px; margin-top: -1px;
-  background: radial-gradient(ellipse at center,
-    rgba(66,52,31,.5) 0 18%, transparent 60%) center / 60% 3px no-repeat;
-}
-.dept-label.unknown {
-  font-style: italic; letter-spacing: .2em; font-size: 11.5px;
-  color: rgba(234,224,198,.75);
-  text-shadow: 0 1px 4px rgba(20,16,12,.9);
-}
-.dept-label.conquered { color: var(--or-vif); text-shadow: 0 0 6px rgba(227,179,65,.5); }
-
-/* --- Ornements de mer ---------------------------------------- */
-.sea-ornament { pointer-events: none; opacity: .8; }
-
-/* --- Bandeau de synchronisation ------------------------------- */
+/* ─────────── Bandeau de synchronisation ─────────── */
 #sync-banner {
-  position: fixed; top: calc(82px + env(safe-area-inset-top)); left: 50%;
-  transform: translate(-50%, -12px);
-  z-index: 30; padding: 7px 18px;
-  font-family: var(--etiquette); font-size: .9rem;
-  background: rgba(43,39,51,.92); color: var(--or-vif);
-  border: 1px solid var(--or);
-  opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s;
+  position:fixed; left:50%; top:calc(96px + env(safe-area-inset-top));
+  z-index:30; transform:translate(-50%,-8px);
+  max-width:min(460px,calc(100vw - 40px));
+  padding:9px 16px; border-radius:var(--r-s);
+  background:var(--voile-dense); backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--trait-os);
+  font-size:12.5px; color:var(--os-2); text-align:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .3s ease, transform .3s ease;
 }
-#sync-banner.show { opacity: 1; transform: translate(-50%, 0); }
+#sync-banner.show { opacity:1; transform:translate(-50%,0); }
 
-/* --- Ouverture : parchemin qui se déroule --------------------- */
-#loading {
-  position: fixed; inset: 0; z-index: 100;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 18px;
-  background:
-    radial-gradient(ellipse at center, rgba(59,47,35,.15), rgba(24,17,11,.75)),
-    url('parchemin.png');
-  background-size: auto, 512px;
-  transition: clip-path 1.4s cubic-bezier(.6,0,.3,1), opacity .4s 1.1s;
-  clip-path: inset(0 0 0 0);
-}
-#loading.done { clip-path: inset(0 0 100% 0); opacity: 0; pointer-events: none; }
-#loading h1 {
-  font-size: clamp(1.7rem, 7vw, 3rem); color: var(--encre);
-  text-shadow: 0 1px 0 rgba(234,224,198,.6);
-}
-#loading .load-sub {
-  font-family: var(--etiquette); letter-spacing: .3em; color: var(--sang);
-}
-#loading .load-hint {
-  font-style: italic; color: var(--encre-pale); max-width: 80vw; text-align: center;
-}
-#loading.fatal .load-hint { color: var(--sang); font-weight: 700; }
-#loading:not(.fatal) .load-hint::after {
-  content: ''; display: inline-block; width: 1em;
-  animation: pts 1.4s steps(4) infinite;
-}
-@keyframes pts { 0% {content:'';} 25% {content:'.';} 50% {content:'..';} 75% {content:'...';} }
-
-/* --- Écran de liaison Strava ---------------------------------- */
-#connect {
-  position: fixed; inset: 0; z-index: 90;
-  display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(ellipse at center, rgba(59,47,35,.2), rgba(24,17,11,.8)),
-    url('parchemin.png');
-  background-size: auto, 512px;
-  padding: 20px;
-}
-#connect .ornate {
-  max-width: 420px; padding: 30px 26px 26px; text-align: center;
-}
-#connect h1 { font-size: 1.8rem; margin-bottom: 4px; }
-#connect .devise { font-family: var(--etiquette); letter-spacing: .25em; color: var(--sang); }
-#connect p { line-height: 1.5; }
-#connect .diag {
-  margin-top: 14px; padding: 9px 12px;
-  font-size: .88rem; font-style: italic; line-height: 1.45;
-  color: var(--sang); text-align: left;
-  border-left: 3px solid var(--sang);
-  background: rgba(122,46,43,.08);
-  word-break: break-word;
+/* ─────────── Étiquettes de la carte ───────────
+   L'IM Fell ne survit qu'ici, là où il a du sens. */
+.etiquette-carte {
+  font-family:'IM Fell',serif; color:rgba(60,50,40,.5);
+  letter-spacing:.28em; text-transform:uppercase; pointer-events:none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  #loading { transition: opacity .3s; }
-  #loading.done { clip-path: none; }
+/* ─────────── Médaillons de lieux ───────────
+   Une pastille sobre cerclée de la couleur de rareté. */
+.poi-marker {
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(16,13,20,.86); backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  border:1.5px solid var(--rc); color:var(--rc);
+  box-shadow:0 2px 10px rgba(8,6,12,.6);
+  cursor:pointer; transition:transform .18s ease;
 }
+.poi-marker:active { transform:scale(.9); }
+.poi-marker svg { width:14px; height:14px; fill:none; stroke:currentColor;
+  stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ─────────── Feuille de département (bas) ─────────── */
+#dept-panel {
+  position:fixed; left:var(--e3); right:var(--e3);
+  bottom:calc(96px + env(safe-area-inset-bottom));
+  z-index:35; padding:var(--e3) var(--e3) 18px;
+  background:var(--voile); backdrop-filter:blur(20px) saturate(1.1);
+  -webkit-backdrop-filter:blur(20px) saturate(1.1);
+  border:1px solid var(--trait); border-radius:var(--r);
+  transform:translateY(20px); opacity:0; pointer-events:none;
+  transition:transform .35s cubic-bezier(.2,.8,.3,1), opacity .35s ease;
+}
+#dept-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
+#dept-panel .fermer {
+  position:absolute; top:10px; right:12px;
+  background:none; border:none; color:var(--os-3); font-size:15px;
+  padding:4px 6px; cursor:pointer;
+}
+#dp-name { font-family:'Cinzel',serif; font-size:19px; color:var(--os); }
+#dept-panel .statut {
+  font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--os-3); margin:3px 0 4px;
+}
+#dp-pct { color:var(--or-vif); font-variant-numeric:tabular-nums; }
+#dp-cells {
+  font-size:12px; color:var(--os-3); margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+#dept-panel .jauge { margin-top:12px; }
+
+/* ─────────── Barre d'onglets ─────────── */
+#tabbar {
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  display:flex; padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(14,12,16,.86); backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  border-top:1px solid var(--trait-os);
+}
+.tab {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+  background:none; border:none; padding:6px 2px; cursor:pointer;
+  color:var(--os-3); font-family:'Inter',sans-serif; font-size:10.5px;
+  letter-spacing:.02em; transition:color .2s ease;
+}
+.tab svg {
+  width:21px; height:21px; fill:none; stroke:currentColor;
+  stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round;
+}
+.tab.active { color:var(--or-vif); }

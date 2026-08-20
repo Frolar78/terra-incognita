@@ -332,7 +332,7 @@
     return new Promise((res) => {
       const el = document.getElementById('fait-annonce');
       if (!el) return res();
-      el.querySelector('.fa-sceau').textContent = f.sceau;
+      el.querySelector('.fa-sceau').innerHTML = f.sceau;
       el.querySelector('.fa-titre').textContent = f.titre;
       el.querySelector('.fa-xp').textContent = '+' + f.xp + ' XP';
       el.classList.remove('hidden');
@@ -350,7 +350,7 @@
       let gain = 0;
       for (const f of nouveaux) {
         gain += f.xp;
-        await journal('fait', `${f.sceau} Haut fait : « ${f.titre} » — +${f.xp} XP.`);
+        await journal('fait', `Haut fait : « ${f.titre} » — +${f.xp} XP.`);
       }
       xpTotal += gain;
       UI.updateHUD(xpTotal);
