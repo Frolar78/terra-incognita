@@ -154,6 +154,7 @@
     try {
       overlay(true);
       $('cine-date').textContent = 'Le chroniqueur prépare le récit…';
+      $('cine-titre').textContent = 'récit v3';
       $('cine-titre').textContent = '';
       $('cine-jauge').style.width = '0%';
       $('cine-pct').textContent = '';
