@@ -80,10 +80,16 @@
   async function jouer() {
     if (running) return;
     running = true; annule = false;
+    let jouee = false; // n'a de valeur que si le récit s'est vraiment déroulé
 
     const btnPasser = $('cine-passer');
     const onPasser = () => { annule = true; };
     if (btnPasser) btnPasser.addEventListener('click', onPasser);
+
+    // Referme les panneaux : le récit se regarde sur la carte
+    document.querySelectorAll('.panel.open, .sheet.open').forEach((p) => p.classList.remove('open'));
+    document.querySelectorAll('.tab').forEach((t) =>
+      t.classList.toggle('active', t.dataset.panel === 'panel-carte'));
 
     // Mémoriser l'état pour tout restaurer à la fin
     const vueAvant = { center: map.getCenter(), zoom: map.getZoom() };
@@ -184,8 +190,13 @@
         $('cine-date').textContent = 'Voilà ton royaume, explorateur.';
         await attendre(2600);
       }
+      jouee = true; // le récit s'est déroulé (jusqu'au bout ou passé volontairement)
     } catch (e) {
       console.error(e);
+      if (window.TI.UI && window.TI.UI.toast) {
+        window.TI.UI.toast('La cinématique n\u2019a pas pu se dérouler : ' +
+          (e && e.message ? e.message : 'erreur inconnue'), 7000);
+      }
     } finally {
       // Restauration intégrale : rien de la cinématique ne persiste
       try {
@@ -201,7 +212,9 @@
       if (btnPasser) btnPasser.removeEventListener('click', onPasser);
       overlay(false);
       running = false;
-      await DB.metaSet('cineVue', true);
+      // « Déjà vue » seulement si le récit s'est vraiment déroulé : une
+      // interruption technique ne doit pas le neutraliser pour toujours.
+      if (jouee) await DB.metaSet('cineVue', true);
     }
   }
 

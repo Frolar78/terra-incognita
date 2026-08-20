@@ -576,7 +576,10 @@
         UI.toast('Haute précision activée : un appel Strava par activité — le quota s\'épuisera plus vite.', 6000);
     };
 
-    $('btn-cine').onclick = () => window.TI.Cine.jouer();
+    $('btn-cine').onclick = async () => {
+      try { await window.TI.Cine.jouer(); }
+      catch (e) { UI.toast('Cinématique impossible : ' + e.message, 7000); }
+    };
 
     $('btn-export').onclick = async () => {
       const data = await DB.exportAll();
