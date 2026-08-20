@@ -14,7 +14,8 @@
   const COL_CORE = '43,39,51';     // #2B2733 cœur de brume
   const COL_EDGE = '90,81,104';    // #5A5168 lisière
   const GOLD = '227,179,65';       // #E3B341 liseré
-  const FOG_ALPHA = 0.93;          // le relief reste deviné dessous
+  const FOG_ALPHA = 0.62;          // voile : la carte reste lisible dessous
+  const REVEAL_LIGHT = 0.08;       // clarté ajoutée sur les terres révélées
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function mercX(lng) { return (lng + 180) / 360; }
@@ -220,12 +221,12 @@
 
       // 2. Deux voiles de bruit qui dérivent en sens opposés
       ctx.globalCompositeOperation = 'multiply';
-      this._tile(ctx, this.tex1, this.o1, this.o1 * 0.6, 0.55);
-      this._tile(ctx, this.tex2, -this.o2, this.o2 * 0.4, 0.4);
+      this._tile(ctx, this.tex1, this.o1, this.o1 * 0.6, 0.38);
+      this._tile(ctx, this.tex2, -this.o2, this.o2 * 0.4, 0.28);
 
       // 2 bis. Pointe de violet dans les creux
       ctx.globalCompositeOperation = 'overlay';
-      ctx.globalAlpha = 0.16;
+      ctx.globalAlpha = 0.10;
       ctx.fillStyle = '#4A3E5E';
       ctx.fillRect(0, 0, w, h);
       ctx.globalAlpha = 1;
@@ -233,6 +234,13 @@
       // 3. Soustraction des zones révélées (bords effilochés)
       ctx.globalCompositeOperation = 'destination-out';
       ctx.drawImage(this.maskBlur, 0, 0);
+
+      // 3 bis. Lumière : léger lavis clair sur les terres révélées,
+      // pour qu'elles paraissent éclairées face au voile alentour
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = REVEAL_LIGHT;
+      ctx.drawImage(this.maskBlur, 0, 0);
+      ctx.globalAlpha = 1;
 
       // 4. Liseré : halo diffus puis fil doré
       ctx.globalCompositeOperation = 'source-over';
