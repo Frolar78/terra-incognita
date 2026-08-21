@@ -184,12 +184,28 @@
     const b = map.getBounds();
     const w = b.getWest(), e = b.getEast(), s = b.getSouth(), n = b.getNorth();
 
+    // On retient les plus peuplées visibles, puis on écarte celles
+    // dont l'étiquette viendrait en chevaucher une autre : sur une
+    // carte, deux noms superposés valent moins qu'un seul lisible.
+    const pris = [];
     const choisies = [];
     for (const t of villes) {           // déjà triées par population
       if (t[3] < seuil) break;
       if (t[1] < s || t[1] > n || t[2] < w || t[2] > e) continue;
+      const pt = map.project([t[2], t[1]]);
+      const large = t[3] >= 150000;
+      const larg = t[0].length * (large ? 8.2 : 5.9) + 10;
+      const haut = large ? 20 : 16;
+      const r = { x1: pt.x - larg / 2, x2: pt.x + larg / 2,
+        y1: pt.y + 2, y2: pt.y + 2 + haut };
+      let libre = true;
+      for (const o of pris) {
+        if (r.x1 < o.x2 && r.x2 > o.x1 && r.y1 < o.y2 && r.y2 > o.y1) { libre = false; break; }
+      }
+      if (!libre) continue;
+      pris.push(r);
       choisies.push(t);
-      if (choisies.length >= 45) break;
+      if (choisies.length >= 40) break;
     }
 
     for (let i = 0; i < choisies.length; i++) {
