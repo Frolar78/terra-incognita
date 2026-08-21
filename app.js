@@ -278,6 +278,10 @@
         if (d) UI.showDeptPanel(d);
       });
 
+      // Villes, reliefs et massifs : ce qui fait une carte
+      try { await window.TI.Carto.poser(map); }
+      catch (e) { console.error('cartographie :', e); }
+
       window.TI.Codex.init(map);
       await window.TI.Codex.refresh();
       const boxMesure = document.getElementById('hud-france-box');
