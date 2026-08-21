@@ -98,11 +98,32 @@
 
   // ----------------------------------------------------------
   async function charger() {
+    // Même numéro de version que les scripts : sans cela, le
+    // navigateur ressert obstinément l'ancien jeu de données.
+    const v0 = (document.querySelector('script[src*="cartographie.js"]') || {}).src || '';
+    const ver = v0.includes('?v=') ? '?v=' + v0.split('?v=')[1] : '';
     const [v, r] = await Promise.all([
-      fetch('villes.json').then((x) => x.json()),
-      fetch('reliefs.json').then((x) => x.json()),
+      fetch('villes.json' + ver).then((x) => x.json()),
+      fetch('reliefs.json' + ver).then((x) => x.json()),
     ]);
     villes = v; reliefs = r;
+    indexer();
+  }
+
+  // Index spatial : sans lui, chaque mouvement projetterait
+  // 18 000 villes — c'est ce qui faisait ramer le zoom.
+  const CASE = 0.2;
+  const grille = new Map();
+  function cle(lat, lng) {
+    return Math.floor(lat / CASE) + '_' + Math.floor(lng / CASE);
+  }
+  function indexer() {
+    grille.clear();
+    for (const t of villes) {
+      const k = cle(t[1], t[2]);
+      if (!grille.has(k)) grille.set(k, []);
+      grille.get(k).push(t);
+    }
   }
 
   function geoVilles(min, max) {
@@ -156,8 +177,16 @@
     }
 
     posesMassifs();
-    map.on('moveend', majEtiquettes);
-    map.on('zoom', majEtiquettes);
+    // « moveend » couvre déjà la fin d'un zoom ou d'un déplacement.
+    // Écouter « zoom » image par image faisait ramer la carte : les
+    // marqueurs suivent tout seuls, seul le choix des noms attend.
+    let enFile = null;
+    const differer = () => {
+      if (enFile) cancelAnimationFrame(enFile);
+      enFile = requestAnimationFrame(() => { enFile = null; majEtiquettes(); });
+    };
+    map.on('moveend', differer);
+    map.on('zoomend', differer);
     majEtiquettes();
   }
 
@@ -188,10 +217,20 @@
     // dont l'étiquette viendrait en chevaucher une autre : sur une
     // carte, deux noms superposés valent moins qu'un seul lisible.
     const pris = [];
+    // Candidates : seulement les cases de la grille visibles à l'écran
+    const cand = [];
+    for (let la = Math.floor(s / CASE); la <= Math.floor(n / CASE); la++) {
+      for (let lo = Math.floor(w / CASE); lo <= Math.floor(e / CASE); lo++) {
+        const lot = grille.get(la + '_' + lo);
+        if (!lot) continue;
+        for (const t of lot) if (t[3] >= seuil) cand.push(t);
+      }
+    }
+    cand.sort((a, b) => b[3] - a[3]);
+    if (cand.length > 300) cand.length = 300;
+
     const choisies = [];
-    for (const t of villes) {           // déjà triées par population
-      if (t[3] < seuil) break;
-      if (t[1] < s || t[1] > n || t[2] < w || t[2] > e) continue;
+    for (const t of cand) {             // les plus peuplées d'abord
       const pt = map.project([t[2], t[1]]);
       const large = t[3] >= 150000;
       const larg = t[0].length * (large ? 8.2 : 5.9) + 10;
