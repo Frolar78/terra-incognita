@@ -14,7 +14,7 @@
   const COL_CORE = '110,101,122';  // #6E657A cœur de brume (clair)
   const COL_EDGE = '152,142,158';  // #988E9E lisière (plus claire encore)
   const GOLD = '227,179,65';       // #E3B341 liseré
-  const FOG_ALPHA = 0.55;          // voile : la carte reste lisible dessous
+  const FOG_ALPHA = 0.60;          // voile : la carte reste lisible dessous
   const REVEAL_LIGHT = 0.10;       // clarté ajoutée sur les terres révélées
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -57,10 +57,14 @@
         type: 'canvas', canvas: this.canvas,
         coordinates: this._quad(), animate: true,
       });
+      // La brume se glisse SOUS la mer et les tracés : on n'explore pas
+      // l'océan, et le trait de côte doit rester lisible en toute
+      // circonstance — c'est lui qui donne à la carte sa silhouette.
+      const avant = this.map.getLayer('mer-fond') ? 'mer-fond' : undefined;
       this.map.addLayer({
         id: 'fog', type: 'raster', source: 'fog',
         paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear' },
-      });
+      }, avant);
       this.map.on('moveend', () => this.refresh());
       this.map.on('resize', () => { this._resize(); this.refresh(); });
       this.refresh();

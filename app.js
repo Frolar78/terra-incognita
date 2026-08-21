@@ -134,66 +134,91 @@
           traces: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
         layers: [
+          // ── La terre : parchemin chaud ────────────────────────
           { id: 'fond', type: 'background',
-            paint: { 'background-color': '#E4D8BA' } },
+            paint: { 'background-color': '#E7DBBC' } },
           { id: 'relief', type: 'hillshade', source: 'relief',
             paint: {
-              'hillshade-shadow-color': '#5A4632',
-              'hillshade-highlight-color': '#FFF6DF',
-              'hillshade-accent-color': '#8B7355',
-              'hillshade-exaggeration': 0.55,
+              'hillshade-shadow-color': '#6B5540',
+              'hillshade-highlight-color': '#FFF8E4',
+              'hillshade-accent-color': '#9A836A',
+              'hillshade-exaggeration': 0.48,
             } },
-          // Seconde passe contrastée : effet de gravure dans les pentes
+          // Seconde passe : la gravure dans les pentes fortes
           { id: 'relief-grave', type: 'hillshade', source: 'relief',
             paint: {
-              'hillshade-shadow-color': '#3B2F23',
-              'hillshade-highlight-color': 'rgba(255,246,223,0)',
-              'hillshade-accent-color': '#4a3b28',
-              'hillshade-exaggeration': 0.9,
+              'hillshade-shadow-color': '#4A3B2A',
+              'hillshade-highlight-color': 'rgba(255,248,228,0)',
+              'hillshade-accent-color': '#59462F',
+              'hillshade-exaggeration': 0.62,
               'hillshade-illumination-direction': 300,
             } },
+
+          // ── La mer : froide, franchement distincte de la terre ──
+          // (la brume est insérée juste sous cette couche : l'océan
+          //  n'est jamais voilé, la silhouette du pays reste lisible)
           { id: 'mer-fond', type: 'fill', source: 'mer',
-            paint: { 'fill-color': '#DCCFA9' } },
-          // Lignes d'eau de portulan : le trait de côte répété vers le
-          // large, de plus en plus pâle (anneau mer CCW → offsets négatifs)
+            paint: { 'fill-color': '#93A6AA' } },
+          // Dégradé de profondeur : bandes de plus en plus sombres
+          { id: 'mer-profond-1', type: 'line', source: 'mer',
+            paint: { 'line-color': '#7C9095', 'line-width': 26,
+              'line-offset': -13, 'line-blur': 12, 'line-opacity': 0.55 } },
+          { id: 'mer-profond-2', type: 'line', source: 'mer',
+            paint: { 'line-color': '#6B8085', 'line-width': 60,
+              'line-offset': -46, 'line-blur': 28, 'line-opacity': 0.4 } },
+          // Lignes d'eau de portulan, tracées vers le large
           { id: 'mer-ligne-1', type: 'line', source: 'mer',
-            paint: { 'line-color': '#6E5F4B', 'line-opacity': 0.30,
-              'line-width': 1.1, 'line-offset': -4 } },
+            paint: { 'line-color': '#3E5257', 'line-opacity': 0.34,
+              'line-width': 0.9, 'line-offset': -5 } },
           { id: 'mer-ligne-2', type: 'line', source: 'mer',
-            paint: { 'line-color': '#6E5F4B', 'line-opacity': 0.22,
-              'line-width': 1.05, 'line-offset': -9 } },
+            paint: { 'line-color': '#3E5257', 'line-opacity': 0.24,
+              'line-width': 0.85, 'line-offset': -11 } },
           { id: 'mer-ligne-3', type: 'line', source: 'mer',
-            paint: { 'line-color': '#6E5F4B', 'line-opacity': 0.15,
-              'line-width': 1.0, 'line-offset': -16 } },
-          { id: 'mer-ligne-4', type: 'line', source: 'mer',
-            paint: { 'line-color': '#6E5F4B', 'line-opacity': 0.09,
-              'line-width': 1.0, 'line-offset': -25 } },
-          { id: 'cote-ombre', type: 'line', source: 'mer',
-            paint: { 'line-color': '#8B7355', 'line-width': 4.5, 'line-opacity': 0.18,
-              'line-blur': 3 } },
+            paint: { 'line-color': '#3E5257', 'line-opacity': 0.15,
+              'line-width': 0.8, 'line-offset': -19 } },
+
+          // ── Le trait de côte : la ligne maîtresse de la carte ──
+          // Un liseré clair côté terre (offsets positifs = intérieur),
+          // puis l'encre franche sur le tracé même.
+          { id: 'cote-greve', type: 'line', source: 'mer',
+            paint: { 'line-color': '#F3E9CE', 'line-opacity': 0.75,
+              'line-width': ['interpolate', ['linear'], ['zoom'], 5, 3, 11, 8],
+              'line-offset': ['interpolate', ['linear'], ['zoom'], 5, 2, 11, 5] } },
           { id: 'cote', type: 'line', source: 'mer',
-            paint: { 'line-color': '#3B2F23', 'line-width': 1.4 } },
+            paint: {
+              'line-color': '#22190F',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 4.6, 1.3, 8, 2.1, 12, 3.4],
+            } },
+
+          // ── Eaux intérieures ──────────────────────────────────
           { id: 'lacs-fond', type: 'fill', source: 'lacs',
-            paint: { 'fill-color': '#D8CBA6', 'fill-opacity': 0.9 } },
+            paint: { 'fill-color': '#93A6AA' } },
           { id: 'lacs-trait', type: 'line', source: 'lacs',
-            paint: { 'line-color': '#6E5F4B', 'line-width': 0.9 } },
+            paint: { 'line-color': '#22190F', 'line-width': 1,
+              'line-opacity': 0.85 } },
           { id: 'fleuves', type: 'line', source: 'fleuves',
-            paint: { 'line-color': '#8B7355', 'line-opacity': 0.75,
-              'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.7, 11, 2.2] } },
+            paint: { 'line-color': '#5B7378', 'line-opacity': 0.8,
+              'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.6, 11, 2.4] } },
+
+          // ── Découpage administratif : discret de loin, net de près ──
           { id: 'dept-fill', type: 'fill', source: 'depts',
             paint: { 'fill-color': '#000', 'fill-opacity': 0 } }, // zone cliquable
           { id: 'dept-line', type: 'line', source: 'depts',
             paint: {
               'line-color': ['case', ['boolean', ['feature-state', 'conquis'], false],
-                '#E3B341', '#6E5F4B'],
+                '#C9A227', '#7A6A52'],
               'line-width': ['case', ['boolean', ['feature-state', 'conquis'], false],
-                2.2, 0.9],
-              'line-opacity': 0.85,
+                2, ['interpolate', ['linear'], ['zoom'], 5, 0.5, 9, 1.1]],
+              'line-opacity': ['case', ['boolean', ['feature-state', 'conquis'], false],
+                0.95, ['interpolate', ['linear'], ['zoom'], 5, 0.32, 9, 0.7]],
+              'line-dasharray': [3, 2],
             } },
+
+          // ── Tes tracés ────────────────────────────────────────
           { id: 'traces', type: 'line', source: 'traces',
             layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': '#7A2E2B', 'line-opacity': 0.85,
-              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 13, 3.2] } },
+            paint: { 'line-color': '#8E2F2A', 'line-opacity': 0.9,
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.3, 13, 3.4] } },
         ],
       },
       bounds: [[bb[0], bb[1]], [bb[2], bb[3]]],

@@ -390,7 +390,7 @@
       map.addLayer({
         id: 'cine-anciennes', type: 'line', source: 'cine-anciennes',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#7A2E2B', 'line-width': 1.6, 'line-opacity': 0.42 },
+        paint: { 'line-color': '#8E2F2A', 'line-width': 1.5, 'line-opacity': 0.38 },
       });
     }
     if (!map.getSource('cine-traces')) {
@@ -399,7 +399,7 @@
         id: 'cine-traces', type: 'line', source: 'cine-traces',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': '#9B3A33', 'line-width': 2.6, 'line-opacity': 0.98,
+          'line-color': '#A8352E', 'line-width': 2.8, 'line-opacity': 1,
           'line-blur': 0.4,
         },
       });

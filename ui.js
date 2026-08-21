@@ -143,22 +143,22 @@
       };
       // Galion à l'encre, golfe de Gascogne
       mk(`<svg viewBox="0 0 120 90" width="74" height="55">
-        <g fill="none" stroke="#3B2F23" stroke-width="2" stroke-linecap="round">
-          <path d="M18 62 Q60 74 102 60 L94 74 Q60 84 26 74 Z" fill="#3B2F23" fill-opacity=".12"/>
+        <g fill="none" stroke="#1C2A2E" stroke-width="2" stroke-linecap="round">
+          <path d="M18 62 Q60 74 102 60 L94 74 Q60 84 26 74 Z" fill="#1C2A2E" fill-opacity=".10"/>
           <path d="M18 62 Q60 74 102 60"/>
           <path d="M26 74 Q60 84 94 74"/>
           <path d="M45 62 V20 M75 60 V14"/>
-          <path d="M45 22 Q28 32 45 44 Z" fill="#EAE0C6" fill-opacity=".8"/>
-          <path d="M75 16 Q56 28 75 42 Z" fill="#EAE0C6" fill-opacity=".8"/>
+          <path d="M45 22 Q28 32 45 44 Z" fill="#DCE4E2" fill-opacity=".55"/>
+          <path d="M75 16 Q56 28 75 42 Z" fill="#DCE4E2" fill-opacity=".55"/>
           <path d="M75 16 L86 20" stroke-width="1.6"/>
           <path d="M8 70 q6 -4 12 0 q6 4 12 0 M88 76 q6 -4 12 0" stroke-width="1.4" opacity=".7"/>
         </g></svg>`, [-4.6, 46.1], 'galion');
       // Serpent de mer, Méditerranée
       mk(`<svg viewBox="0 0 140 70" width="86" height="43">
-        <g fill="none" stroke="#3B2F23" stroke-width="2.4" stroke-linecap="round">
+        <g fill="none" stroke="#1C2A2E" stroke-width="2.4" stroke-linecap="round">
           <path d="M8 46 q14 -26 28 0 t28 0 t28 0 t28 0" />
           <path d="M120 46 q8 -14 14 -6 q-2 8 -12 10 M124 38 l6 -10" stroke-width="2"/>
-          <circle cx="129" cy="37" r="1.6" fill="#3B2F23"/>
+          <circle cx="129" cy="37" r="1.6" fill="#1C2A2E"/>
           <path d="M22 34 l4 -8 M50 34 l4 -8 M78 34 l4 -8" stroke-width="1.6" opacity=".8"/>
           <path d="M4 58 q8 -5 16 0 M116 60 q8 -5 16 0" stroke-width="1.3" opacity=".6"/>
         </g></svg>`, [5.6, 42.35], 'serpent');
