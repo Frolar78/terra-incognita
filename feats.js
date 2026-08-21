@@ -170,6 +170,26 @@
       cond: 'Enregistrer 300 sorties', xp: 1200,
       mesure: (c) => J(c.acts.length, 300) },
 
+    // ---------------- Domaine ----------------
+    { id: 'domaine-10', fam: 'Domaine', titre: 'Fief', sceau: SCEAUX.grille,
+      cond: '10 km² d\u2019un seul tenant', xp: 200,
+      mesure: (c) => J(Math.round(c.domaineKm2 * 10) / 10, 10) },
+    { id: 'domaine-50', fam: 'Domaine', titre: 'Baronnie', sceau: SCEAUX.grille,
+      cond: '50 km² d\u2019un seul tenant', xp: 500,
+      mesure: (c) => J(Math.round(c.domaineKm2 * 10) / 10, 50) },
+    { id: 'domaine-200', fam: 'Domaine', titre: 'Duché', sceau: SCEAUX.couronne,
+      cond: '200 km² d\u2019un seul tenant', xp: 1200,
+      mesure: (c) => J(Math.round(c.domaineKm2 * 10) / 10, 200) },
+    { id: 'foyer-25', fam: 'Domaine', titre: 'Maître des environs', sceau: SCEAUX.boussole,
+      cond: 'Révéler 25 % des 5 km autour de chez toi', xp: 300,
+      mesure: (c) => J(Math.round(c.rayonPct * 10) / 10, 25) },
+    { id: 'foyer-60', fam: 'Domaine', titre: 'Seigneur des environs', sceau: SCEAUX.boussole,
+      cond: 'Révéler 60 % des 5 km autour de chez toi', xp: 800,
+      mesure: (c) => J(Math.round(c.rayonPct * 10) / 10, 60) },
+    { id: 'foyer-90', fam: 'Domaine', titre: 'Plus rien à découvrir', sceau: SCEAUX.couronne,
+      cond: 'Révéler 90 % des 5 km autour de chez toi', xp: 2000,
+      mesure: (c) => J(Math.round(c.rayonPct * 10) / 10, 90) },
+
     // ---------------- Curiosités ----------------
     { id: 'aube', fam: 'Curiosité', titre: 'Avant le coq', sceau: SCEAUX.soleil,
       cond: 'Partir avant 6 h du matin', xp: 150,
@@ -236,7 +256,15 @@
       return s && s.pct >= seuil;
     }).length;
 
-    return { acts, cells, pois, parRarete, parType,
+    // Mesures locales du Lot 4 (calcul un peu plus lourd : une fois)
+    let domaineKm2 = 0, rayonPct = 0;
+    try {
+      const b = await window.TI.Local.bilan();
+      domaineKm2 = b.domaine.km2;
+      rayonPct = b.rayon ? b.rayon.pct : 0;
+    } catch (e) { /* mesures indisponibles : jauges à zéro */ }
+
+    return { acts, cells, pois, parRarete, parType, domaineKm2, rayonPct,
       typesDistincts: Object.values(parType).filter((n) => n > 0).length,
       maxElev, maxDist, maxNewCells, maxAlt, aube, nuit,
       saisons: saisons.size, sports: sports.size,

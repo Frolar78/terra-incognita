@@ -319,6 +319,32 @@
     return acts.length;
   }
 
+  // Lieux d'un secteur donné, tous types confondus (Lot 4).
+  // S'appuie sur le cache de tuiles : gratuit si la zone est connue.
+  async function lieuxAutour(lat, lng, rayonM) {
+    const m = rayonM / 111000;
+    const cles = new Set();
+    for (const dLat of [-m, 0, m]) {
+      for (const dLng of [-m * 1.4, 0, m * 1.4]) {
+        cles.add(tileOf(lat + dLat, lng + dLng));
+      }
+    }
+    const out = [];
+    const vus = new Set();
+    for (const k of cles) {
+      let pois;
+      try { pois = await fetchTile(k); } catch (e) { continue; }
+      for (const p of pois) {
+        if (vus.has(p.id)) continue;
+        vus.add(p.id);
+        const dx = (p.lng - lng) * 111000 * Math.cos(lat * Math.PI / 180);
+        const dy = (p.lat - lat) * 111000;
+        if (Math.sqrt(dx * dx + dy * dy) <= rayonM) out.push(p);
+      }
+    }
+    return out;
+  }
+
   window.TI.POI = { TYPES, RARETES, RARETE_XP, DISCOVER_M,
-    scanPending, pendingCount, resetScan };
+    scanPending, pendingCount, resetScan, lieuxAutour };
 })();

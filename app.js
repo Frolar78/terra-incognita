@@ -280,6 +280,13 @@
 
       window.TI.Codex.init(map);
       await window.TI.Codex.refresh();
+      const boxMesure = document.getElementById('hud-france-box');
+      if (boxMesure) boxMesure.onclick = async () => {
+        mesureHUD = (mesureHUD + 1) % 3;
+        dernierBilan = null;
+        await majMesureHUD();
+      };
+
       const btnPoi = document.getElementById('btn-poi-toggle');
       if (btnPoi) btnPoi.onclick = async () => {
         const visibles = await window.TI.Codex.basculer();
@@ -341,6 +348,83 @@
   // Synchronisation Strava
   // ==========================================================
   // ==========================================================
+  // Lot 4 — ton domaine : des objectifs qu'on peut atteindre
+  // ==========================================================
+  let mesureHUD = 0; // 0 France · 1 domaine · 2 foyer
+  let dernierBilan = null;
+
+  async function majMesureHUD() {
+    const el = document.getElementById('hud-france');
+    const lib = document.getElementById('hud-france-lib');
+    if (!el || !lib) return;
+    if (mesureHUD === 0) {
+      el.textContent = P.formatPct(P.francePct());
+      lib.textContent = 'France';
+      return;
+    }
+    if (!dernierBilan) dernierBilan = await window.TI.Local.bilan();
+    if (mesureHUD === 1) {
+      el.textContent = dernierBilan.domaine.km2.toFixed(1).replace('.', ',');
+      lib.textContent = 'km² d\u2019un tenant';
+    } else {
+      const r = dernierBilan.rayon;
+      el.textContent = r ? P.formatPct(r.pct) : '—';
+      lib.textContent = r ? r.rayonKm + ' km autour' : 'foyer inconnu';
+    }
+  }
+
+  async function renderDomaine() {
+    const el = document.getElementById('domaine-bloc');
+    if (!el) return;
+    let b;
+    try { b = await window.TI.Local.bilan(); }
+    catch (e) { console.error(e); el.innerHTML = ''; return; }
+    dernierBilan = b;
+
+    const km2 = b.domaine.km2.toFixed(1).replace('.', ',');
+    const r = b.rayon;
+    let h = '<div class="dom-titre">Ton domaine</div><div class="dom-grille">';
+    h += `<div class="dom-carte">
+      <div class="dom-val">${km2}<small>km²</small></div>
+      <div class="dom-lib">d'un seul tenant</div>
+      <div class="dom-note">${b.domaine.eparses > 0
+        ? fmtNb(b.domaine.eparses) + ' cellules restent isolées du bloc principal'
+        : 'tout ton territoire est d\u2019un seul tenant'}</div>
+    </div>`;
+    if (r) {
+      h += `<div class="dom-carte">
+        <div class="dom-val">${P.formatPct(r.pct)}</div>
+        <div class="dom-lib">${r.rayonKm} km autour de chez toi</div>
+        <div class="dom-barre"><i style="width:${Math.min(100, r.pct).toFixed(1)}%"></i></div>
+        <div class="dom-note">${fmtNb(r.total - r.vues)} cellules encore sous la brume</div>
+      </div>`;
+    } else {
+      h += `<div class="dom-carte"><div class="dom-lib">Foyer</div>
+        <div class="dom-note">Il sera déduit de tes départs dès la première sortie.</div></div>`;
+    }
+    h += '</div>';
+    el.innerHTML = h;
+
+    // Les hauts lieux tout proches, jamais approchés
+    try {
+      const proches = await window.TI.Local.lieuxAConquerir(5);
+      if (proches.length) {
+        const T = window.TI.POI.TYPES;
+        let p = '<div class="dom-titre" style="margin-top:var(--e4)">À conquérir tout près</div>' +
+          '<div class="dom-proches">';
+        for (const x of proches) {
+          p += `<div class="dom-proche">
+            <div class="ic">${T[x.type] ? T[x.type].glyphe : ''}</div>
+            <div class="nm">${x.name}<span>${T[x.type] ? T[x.type].nom : ''}</span></div>
+            <div class="km">${(x.d / 1000).toFixed(1).replace('.', ',')} km</div>
+          </div>`;
+        }
+        el.insertAdjacentHTML('beforeend', p + '</div>');
+      }
+    } catch (e) { /* le cache de secteurs n'est pas encore rempli */ }
+  }
+
+  // ==========================================================
   // Lot 3 — hauts faits
   // ==========================================================
   async function renderFaits() {
@@ -380,6 +464,7 @@
       }
     }
     el.innerHTML = h;
+    renderDomaine();
   }
 
   function fmtNb(n) {
@@ -417,6 +502,7 @@
       UI.updateHUD(xpTotal);
       UI.renderJournal(await DB.getAll('journal'));
       window.TI.Nuage.planifier();
+      dernierBilan = null;
       for (const f of nouveaux) await annonceFait(f);
     }
     await renderFaits();

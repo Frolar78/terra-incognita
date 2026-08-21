@@ -32,7 +32,12 @@
       $('hud-xp-val').textContent =
         `${li.into.toLocaleString('fr-FR')} / ${li.next.toLocaleString('fr-FR')} XP`;
       $('hud-xp-fill').style.width = Math.min(100, (li.into / li.next) * 100) + '%';
-      $('hud-france').textContent = P.formatPct(P.francePct());
+      // Le bloc de droite n'est réécrit que s'il affiche bien la France :
+      // l'explorateur a pu choisir d'y lire son domaine ou son foyer.
+      const lib = $('hud-france-lib');
+      if (!lib || lib.textContent === 'France') {
+        $('hud-france').textContent = P.formatPct(P.francePct());
+      }
       return li;
     },
 

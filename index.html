@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#0E0C10">
   <title>Terra Incognita</title>
   <link rel="stylesheet" href="maplibre-gl.css">
-  <link rel="stylesheet" href="theme.css?v=20260821b">
-  <link rel="stylesheet" href="map.css?v=20260821b">
-  <link rel="stylesheet" href="panels.css?v=20260821b">
+  <link rel="stylesheet" href="theme.css?v=20260821c">
+  <link rel="stylesheet" href="map.css?v=20260821c">
+  <link rel="stylesheet" href="panels.css?v=20260821c">
 </head>
 <body>
 
@@ -46,10 +46,10 @@
       <span id="hud-xp-text"><b>Explorateur</b><span id="hud-xp-val">0 / 150 XP</span></span>
       <div class="jauge"><div id="hud-xp-fill"></div><i></i></div>
     </div>
-    <div id="hud-france-box">
+    <button id="hud-france-box" title="Changer de mesure">
       <span id="hud-france">0 %</span>
-      <small>FRANCE</small>
-    </div>
+      <small id="hud-france-lib">France</small>
+    </button>
   </div>
 
   <!-- Cartouche du département courant -->
@@ -116,6 +116,7 @@
     <header><h2>Hauts faits</h2>
       <button class="fermer" data-close>Fermer</button></header>
     <div class="contenu">
+      <div id="domaine-bloc"></div>
       <div id="faits-stats"></div>
       <div id="faits-liste"></div>
     </div>
@@ -273,19 +274,20 @@
 
   <script src="maplibre-gl.js"></script>
   <script src="h3-js.umd.js"></script>
-  <script src="config.js?v=20260821b"></script>
-  <script src="db.js?v=20260821b"></script>
-  <script src="strava.js?v=20260821b"></script>
-  <script src="h3grid.js?v=20260821b"></script>
-  <script src="progress.js?v=20260821b"></script>
-  <script src="fog.js?v=20260821b"></script>
-  <script src="ui.js?v=20260821b"></script>
-  <script src="poi.js?v=20260821b"></script>
-  <script src="lore.js?v=20260821b"></script>
-  <script src="codex.js?v=20260821b"></script>
-  <script src="nuage.js?v=20260821b"></script>
-  <script src="feats.js?v=20260821b"></script>
-  <script src="cinematic.js?v=20260821b"></script>
-  <script src="app.js?v=20260821b"></script>
+  <script src="config.js?v=20260821c"></script>
+  <script src="db.js?v=20260821c"></script>
+  <script src="strava.js?v=20260821c"></script>
+  <script src="h3grid.js?v=20260821c"></script>
+  <script src="progress.js?v=20260821c"></script>
+  <script src="fog.js?v=20260821c"></script>
+  <script src="ui.js?v=20260821c"></script>
+  <script src="poi.js?v=20260821c"></script>
+  <script src="lore.js?v=20260821c"></script>
+  <script src="codex.js?v=20260821c"></script>
+  <script src="nuage.js?v=20260821c"></script>
+  <script src="local.js?v=20260821c"></script>
+  <script src="feats.js?v=20260821c"></script>
+  <script src="cinematic.js?v=20260821c"></script>
+  <script src="app.js?v=20260821c"></script>
 </body>
 </html>

@@ -212,3 +212,9 @@
 #btn-poi-toggle:active { background:rgba(236,228,212,.10); }
 body.cinema #btn-poi-toggle { opacity:0; pointer-events:none; transition:opacity .7s ease; }
 #btn-poi-toggle { transition:opacity .7s ease, color .2s, border-color .2s, background .2s; }
+
+/* Le bloc de mesure fait défiler France / Domaine / Foyer */
+#hud-france-box {
+  background:none; border:none; padding:0; text-align:right;
+  cursor:pointer; pointer-events:auto; font-family:inherit;
+}
