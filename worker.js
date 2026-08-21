@@ -2,9 +2,11 @@
 // TERRA INCOGNITA — Worker Cloudflare (2 routes, aucune autre)
 //   POST /strava/token  : échange code OAuth / rafraîchissement
 //   POST /lore          : relais vers l'API Claude (Lot 2)
+//   POST /sauvegarde    : sauvegarde automatique du royaume (KV)
 // Variables d'environnement attendues (voir README) :
 //   STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET (secret),
 //   ATHLETE_ID, ALLOWED_ORIGIN, ANTHROPIC_API_KEY (secret)
+// Liaison KV attendue : SAUVEGARDE -> espace TERRA_SAUVEGARDE
 // Les secrets ne transitent JAMAIS côté navigateur.
 // ============================================================
 
@@ -21,6 +23,24 @@ function cors(env, origin) {
 
 function json(obj, status, headers) {
   return new Response(JSON.stringify(obj), { status: status || 200, headers });
+}
+
+// Le porteur du jeton doit être un athlète autorisé.
+// Renvoie l'identifiant d'athlète, ou null si l'accès est refusé.
+async function athleteAutorise(token, env) {
+  if (!token) return null;
+  const who = await fetch('https://www.strava.com/api/v3/athlete', {
+    headers: { Authorization: 'Bearer ' + token },
+  });
+  if (!who.ok) return null;
+  const a = await who.json();
+  if (!a || !a.id) return null;
+  // Liste d'amis explicite : ATHLETE_ID peut contenir plusieurs
+  // identifiants séparés par des virgules.
+  const permis = String(env.ATHLETE_ID || '')
+    .split(',').map((x) => x.trim()).filter(Boolean);
+  if (permis.length && !permis.includes(String(a.id))) return null;
+  return String(a.id);
 }
 
 export default {
@@ -72,6 +92,54 @@ export default {
     }
 
     // ------------------------------------------------------ //
+    // ------------------------------------------------------ //
+    // Sauvegarde du royaume : { token, action:'lire'|'ecrire', data }
+    // Une seule clé par athlète, écrasée à chaque fois : dernier
+    // enregistrement gagnant, comme une sauvegarde de jeu.
+    if (url.pathname === '/sauvegarde') {
+      if (!env.SAUVEGARDE)
+        return json({ error: 'Stockage non relié (liaison KV « SAUVEGARDE » absente)' },
+          501, headers);
+
+      let body;
+      try { body = await request.json(); }
+      catch (e) { return json({ error: 'JSON invalide' }, 400, headers); }
+      const { token, action, data } = body || {};
+
+      const id = await athleteAutorise(token, env);
+      if (!id) return json({ error: 'Athlète non autorisé' }, 403, headers);
+      const cle = 'royaume_' + id;
+
+      if (action === 'lire') {
+        const brut = await env.SAUVEGARDE.get(cle);
+        if (!brut) return json({ vide: true }, 200, headers);
+        let meta = null;
+        try { meta = JSON.parse(await env.SAUVEGARDE.get(cle + '_meta') || 'null'); }
+        catch (e) { /* méta facultative */ }
+        return json({ data: brut, meta }, 200, headers);
+      }
+
+      if (action === 'ecrire') {
+        if (typeof data !== 'string' || !data)
+          return json({ error: 'data requis' }, 400, headers);
+        if (data.length > 20 * 1024 * 1024)
+          return json({ error: 'Sauvegarde trop volumineuse' }, 413, headers);
+        const meta = { ts: Date.now(), octets: data.length };
+        await env.SAUVEGARDE.put(cle, data);
+        await env.SAUVEGARDE.put(cle + '_meta', JSON.stringify(meta));
+        return json({ ok: true, meta }, 200, headers);
+      }
+
+      if (action === 'etat') {
+        let meta = null;
+        try { meta = JSON.parse(await env.SAUVEGARDE.get(cle + '_meta') || 'null'); }
+        catch (e) { /* méta facultative */ }
+        return json({ meta }, 200, headers);
+      }
+
+      return json({ error: "action inconnue (lire, ecrire ou etat)" }, 400, headers);
+    }
+
     if (url.pathname === '/lore') {
       let body;
       try { body = await request.json(); }
@@ -80,13 +148,7 @@ export default {
       if (!token || !name || !material)
         return json({ error: 'token, name et material requis' }, 400, headers);
 
-      // Le porteur du token doit être l'athlète autorisé
-      const who = await fetch('https://www.strava.com/api/v3/athlete', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!who.ok) return json({ error: 'Token Strava invalide' }, 401, headers);
-      const athlete = await who.json();
-      if (env.ATHLETE_ID && String(athlete.id) !== String(env.ATHLETE_ID))
+      if (!(await athleteAutorise(token, env)))
         return json({ error: 'Athlète non autorisé' }, 403, headers);
 
       const prompt =

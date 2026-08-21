@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#0E0C10">
   <title>Terra Incognita</title>
   <link rel="stylesheet" href="maplibre-gl.css">
-  <link rel="stylesheet" href="theme.css?v=20260820g">
-  <link rel="stylesheet" href="map.css?v=20260820g">
-  <link rel="stylesheet" href="panels.css?v=20260820g">
+  <link rel="stylesheet" href="theme.css?v=20260821a">
+  <link rel="stylesheet" href="map.css?v=20260821a">
+  <link rel="stylesheet" href="panels.css?v=20260821a">
 </head>
 <body>
 
@@ -132,12 +132,22 @@
         <button id="btn-poiscan" class="btn secondaire">Repérer</button>
       </div>
       <div class="reglage">
-        <div class="lib">Exporter la sauvegarde
-          <small>Fichier JSON — tes terres conquises, à l'abri</small></div>
+        <div class="lib">Sauvegarde en ligne
+          <small id="nuage-etat">Ton royaume est enregistré automatiquement</small></div>
+        <button id="btn-nuage" class="btn secondaire">Sauvegarder</button>
+      </div>
+      <div class="reglage">
+        <div class="lib">Récupérer le royaume
+          <small>Recharge la dernière sauvegarde en ligne — utile sur un nouvel appareil</small></div>
+        <button id="btn-nuage-lire" class="btn secondaire">Récupérer</button>
+      </div>
+      <div class="reglage">
+        <div class="lib">Copie de secours
+          <small>Un fichier sur ton appareil, en plus de la sauvegarde en ligne</small></div>
         <button id="btn-export" class="btn secondaire">Exporter</button>
       </div>
       <div class="reglage">
-        <div class="lib">Restaurer une sauvegarde</div>
+        <div class="lib">Restaurer depuis un fichier</div>
         <label class="btn secondaire">Importer<input type="file" id="file-import"
           accept="application/json" style="display:none"></label>
       </div>
@@ -254,18 +264,19 @@
 
   <script src="maplibre-gl.js"></script>
   <script src="h3-js.umd.js"></script>
-  <script src="config.js?v=20260820g"></script>
-  <script src="db.js?v=20260820g"></script>
-  <script src="strava.js?v=20260820g"></script>
-  <script src="h3grid.js?v=20260820g"></script>
-  <script src="progress.js?v=20260820g"></script>
-  <script src="fog.js?v=20260820g"></script>
-  <script src="ui.js?v=20260820g"></script>
-  <script src="poi.js?v=20260820g"></script>
-  <script src="lore.js?v=20260820g"></script>
-  <script src="codex.js?v=20260820g"></script>
-  <script src="feats.js?v=20260820g"></script>
-  <script src="cinematic.js?v=20260820g"></script>
-  <script src="app.js?v=20260820g"></script>
+  <script src="config.js?v=20260821a"></script>
+  <script src="db.js?v=20260821a"></script>
+  <script src="strava.js?v=20260821a"></script>
+  <script src="h3grid.js?v=20260821a"></script>
+  <script src="progress.js?v=20260821a"></script>
+  <script src="fog.js?v=20260821a"></script>
+  <script src="ui.js?v=20260821a"></script>
+  <script src="poi.js?v=20260821a"></script>
+  <script src="lore.js?v=20260821a"></script>
+  <script src="codex.js?v=20260821a"></script>
+  <script src="nuage.js?v=20260821a"></script>
+  <script src="feats.js?v=20260821a"></script>
+  <script src="cinematic.js?v=20260821a"></script>
+  <script src="app.js?v=20260821a"></script>
 </body>
 </html>

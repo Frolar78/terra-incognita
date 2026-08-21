@@ -47,6 +47,14 @@
     }
 
     UI.showConnect(false);
+
+    // Appareil vierge mais royaume déjà sauvegardé en ligne : on le
+    // récupère avant d'ouvrir la carte, sans rien demander.
+    try {
+      const m = await window.TI.Nuage.restaurerSiVide();
+      if (m) UI.toast('Royaume récupéré depuis ta sauvegarde en ligne.', 5000);
+    } catch (e) { console.error(e); }
+
     await startMap();
   }
 
@@ -402,6 +410,7 @@
       xpTotal += gain;
       UI.updateHUD(xpTotal);
       UI.renderJournal(await DB.getAll('journal'));
+      window.TI.Nuage.planifier();
       for (const f of nouveaux) await annonceFait(f);
     }
     await renderFaits();
@@ -431,6 +440,7 @@
         UI.updateHUD(xpTotal);
         UI.renderJournal(await DB.getAll('journal'));
         await window.TI.Codex.refresh();
+        window.TI.Nuage.planifier();
         const rares = found.filter((p) => p.rarete >= 2).length;
         UI.toast(`${found.length} haut${found.length > 1 ? 's' : ''} lieu${found.length > 1 ? 'x' : ''} ` +
           `ajouté${found.length > 1 ? 's' : ''} au Codex` +
@@ -563,6 +573,7 @@
         UI.toast('Rien de neuf sous le soleil : la carte est à jour.');
       }
       if (nSkipped) UI.toast(`${nSkipped} activité(s) ignorée(s) — détail dans le Journal.`, 5000);
+      window.TI.Nuage.planifier();
 
       // Lot 3 : au tout premier import, la grande révélation
       if (premierImport && !(await window.TI.Cine.dejaVue())) {
@@ -592,6 +603,13 @@
   // ==========================================================
   // Réglages
   // ==========================================================
+  // iOS suspend l'app sans prévenir : on écrit avant de disparaître
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && window.TI.Nuage) {
+      window.TI.Nuage.surFermeture();
+    }
+  });
+
   function wireSettings() {
     const $ = (id) => document.getElementById(id);
     $('btn-sync').onclick = () => sync();
@@ -633,6 +651,44 @@
       }
       try { await window.TI.Cine.jouer(); }
       catch (e) { UI.toast('Cinématique impossible : ' + e.message, 7000); }
+    };
+
+    // Sauvegarde en ligne
+    async function majNuage() {
+      const m = await window.TI.Nuage.etat();
+      const el = $('nuage-etat');
+      if (!el) return;
+      if (!m) { el.textContent = 'Aucune sauvegarde en ligne pour l\u2019instant'; return; }
+      const d = new Date(m.ts);
+      const ko = Math.round((m.octets || 0) / 1024);
+      el.textContent = 'Dernière sauvegarde : ' +
+        d.toLocaleDateString('fr-FR') + ' à ' +
+        d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) +
+        ' · ' + ko + ' Ko';
+    }
+    majNuage();
+    $('btn-nuage').onclick = async () => {
+      $('btn-nuage').disabled = true;
+      try {
+        await window.TI.Nuage.sauverMaintenant();
+        UI.toast('Royaume sauvegardé en ligne.', 4000);
+        await majNuage();
+      } catch (e) { /* le message a déjà été montré */ }
+      $('btn-nuage').disabled = false;
+    };
+    $('btn-nuage-lire').onclick = async () => {
+      if (!confirm('Remplacer la progression de cet appareil par la dernière ' +
+        'sauvegarde en ligne ?')) return;
+      $('btn-nuage-lire').disabled = true;
+      try {
+        const m = await window.TI.Nuage.restaurer();
+        if (!m) { UI.toast('Aucune sauvegarde en ligne trouvée.', 5000); }
+        else { UI.toast('Royaume récupéré. La page va se recharger.', 4000);
+          setTimeout(() => location.reload(), 1500); }
+      } catch (e) {
+        UI.toast('Récupération impossible : ' + e.message, 7000);
+      }
+      $('btn-nuage-lire').disabled = false;
     };
 
     $('btn-export').onclick = async () => {
