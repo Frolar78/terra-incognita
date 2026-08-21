@@ -258,7 +258,10 @@
         etiquettes.push(m);
       }
       m.el.textContent = t[0];
-      m.el.className = 'ville-label' + (t[3] >= 150000 ? ' cite' : '');
+      // Surtout pas d'affectation de className ici : MapLibre pose sa
+      // propre classe sur l'élément (c'est elle qui le positionne).
+      // L'écraser renvoie l'étiquette dans le flux de la page.
+      m.el.classList.toggle('cite', t[3] >= 150000);
       m.el.style.display = '';
       m.marker.setLngLat([t[2], t[1]]);
     }
