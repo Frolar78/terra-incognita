@@ -280,6 +280,12 @@
 
       window.TI.Codex.init(map);
       await window.TI.Codex.refresh();
+      const btnPoi = document.getElementById('btn-poi-toggle');
+      if (btnPoi) btnPoi.onclick = async () => {
+        const visibles = await window.TI.Codex.basculer();
+        UI.toast(visibles ? 'Hauts lieux affichés sur la carte.'
+                          : 'Hauts lieux masqués — ils restent dans le Codex.', 3000);
+      };
       window.TI.Cine.init(map, fog);
       await renderFaits();
 

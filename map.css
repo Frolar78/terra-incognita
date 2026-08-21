@@ -191,3 +191,24 @@
 
 /* ─────────── Ornements de mer ─────────── */
 .sea-ornament { pointer-events:none; opacity:.7; }
+
+/* ─────────── Afficher / masquer les hauts lieux ─────────── */
+#btn-poi-toggle {
+  position:fixed; right:var(--e4); bottom:calc(206px + env(safe-area-inset-bottom));
+  z-index:19; width:42px; height:42px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--voile); backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--trait-os); color:var(--os-2);
+  cursor:pointer; transition:color .2s, border-color .2s, background .2s;
+}
+#btn-poi-toggle svg {
+  width:19px; height:19px; fill:none; stroke:currentColor;
+  stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;
+}
+#btn-poi-toggle .barre { opacity:0; transition:opacity .2s; }
+#btn-poi-toggle:not(.eteint) { color:var(--or-vif); border-color:var(--trait); }
+#btn-poi-toggle.eteint .barre { opacity:1; }
+#btn-poi-toggle:active { background:rgba(236,228,212,.10); }
+body.cinema #btn-poi-toggle { opacity:0; pointer-events:none; transition:opacity .7s ease; }
+#btn-poi-toggle { transition:opacity .7s ease, color .2s, border-color .2s, background .2s; }

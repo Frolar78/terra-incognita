@@ -16,7 +16,8 @@
   let markers = [];
   let filtre = 'tous';
   let pois = [];
-  let masque = false;     // masquage forcé (cinématique)
+  let masque = false;      // masquage temporaire (cinématique)
+  let choixUtilisateur = true; // préférence durable : montrer les lieux ?
 
   // Les marqueurs n'apparaissent qu'à un zoom où ils sont lisibles.
   // Les Légendaires et Épiques restent visibles un cran plus tôt :
@@ -28,8 +29,26 @@
       const r = m._tiRarete || 0;
       const seuil = r >= 3 ? ZOOM_MIN - 1.6 : ZOOM_MIN;
       const el = m.getElement();
-      el.style.display = (!masque && z >= seuil) ? '' : 'none';
+      el.style.display = (choixUtilisateur && !masque && z >= seuil) ? '' : 'none';
     }
+    const b = document.getElementById('btn-poi-toggle');
+    if (b) {
+      b.classList.toggle('eteint', !choixUtilisateur);
+      b.setAttribute('aria-pressed', String(choixUtilisateur));
+      b.title = choixUtilisateur ? 'Masquer les hauts lieux' : 'Montrer les hauts lieux';
+    }
+  }
+
+  // Préférence durable, conservée d'une session à l'autre
+  async function chargerChoix() {
+    choixUtilisateur = await DB.metaGet('poiVisibles', true);
+    appliquerVisibilite();
+  }
+  async function basculer() {
+    choixUtilisateur = !choixUtilisateur;
+    await DB.metaSet('poiVisibles', choixUtilisateur);
+    appliquerVisibilite();
+    return choixUtilisateur;
   }
 
   function setVisible(v) { masque = !v; appliquerVisibilite(); }
@@ -154,6 +173,7 @@
   function init(m) {
     map = m;
     map.on('zoom', appliquerVisibilite);
+    chargerChoix();
     const f = $('poi-fiche');
     if (f) {
       f.addEventListener('click', (e) => { if (e.target === f) f.classList.add('hidden'); });
@@ -168,5 +188,5 @@
     renderMarkers();
   }
 
-  window.TI.Codex = { init, refresh, openFiche, setVisible };
+  window.TI.Codex = { init, refresh, openFiche, setVisible, basculer, chargerChoix };
 })();

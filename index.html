@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#0E0C10">
   <title>Terra Incognita</title>
   <link rel="stylesheet" href="maplibre-gl.css">
-  <link rel="stylesheet" href="theme.css?v=20260821a">
-  <link rel="stylesheet" href="map.css?v=20260821a">
-  <link rel="stylesheet" href="panels.css?v=20260821a">
+  <link rel="stylesheet" href="theme.css?v=20260821b">
+  <link rel="stylesheet" href="map.css?v=20260821b">
+  <link rel="stylesheet" href="panels.css?v=20260821b">
 </head>
 <body>
 
@@ -63,6 +63,15 @@
   </div>
 
   <!-- Rose des vents -->
+  <!-- Afficher / masquer les hauts lieux sur la carte -->
+  <button id="btn-poi-toggle" aria-pressed="true" title="Masquer les hauts lieux">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/>
+      <circle cx="12" cy="10" r="2.6"/>
+      <path class="barre" d="M4 20L20 4"/>
+    </svg>
+  </button>
+
   <svg id="compass" viewBox="0 0 76 76" aria-hidden="true">
     <circle cx="38" cy="38" r="35" fill="rgba(238,229,205,.42)" stroke="#3B2F23" stroke-width="1.1"/>
     <circle cx="38" cy="38" r="30.5" fill="none" stroke="#8B7355" stroke-width=".7"/>
@@ -264,19 +273,19 @@
 
   <script src="maplibre-gl.js"></script>
   <script src="h3-js.umd.js"></script>
-  <script src="config.js?v=20260821a"></script>
-  <script src="db.js?v=20260821a"></script>
-  <script src="strava.js?v=20260821a"></script>
-  <script src="h3grid.js?v=20260821a"></script>
-  <script src="progress.js?v=20260821a"></script>
-  <script src="fog.js?v=20260821a"></script>
-  <script src="ui.js?v=20260821a"></script>
-  <script src="poi.js?v=20260821a"></script>
-  <script src="lore.js?v=20260821a"></script>
-  <script src="codex.js?v=20260821a"></script>
-  <script src="nuage.js?v=20260821a"></script>
-  <script src="feats.js?v=20260821a"></script>
-  <script src="cinematic.js?v=20260821a"></script>
-  <script src="app.js?v=20260821a"></script>
+  <script src="config.js?v=20260821b"></script>
+  <script src="db.js?v=20260821b"></script>
+  <script src="strava.js?v=20260821b"></script>
+  <script src="h3grid.js?v=20260821b"></script>
+  <script src="progress.js?v=20260821b"></script>
+  <script src="fog.js?v=20260821b"></script>
+  <script src="ui.js?v=20260821b"></script>
+  <script src="poi.js?v=20260821b"></script>
+  <script src="lore.js?v=20260821b"></script>
+  <script src="codex.js?v=20260821b"></script>
+  <script src="nuage.js?v=20260821b"></script>
+  <script src="feats.js?v=20260821b"></script>
+  <script src="cinematic.js?v=20260821b"></script>
+  <script src="app.js?v=20260821b"></script>
 </body>
 </html>
