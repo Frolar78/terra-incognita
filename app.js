@@ -203,15 +203,23 @@
           // ── Découpage administratif : discret de loin, net de près ──
           { id: 'dept-fill', type: 'fill', source: 'depts',
             paint: { 'fill-color': '#000', 'fill-opacity': 0 } }, // zone cliquable
+          // Limites ordinaires : pointillé discret de loin, net de près.
+          // (Les expressions de zoom doivent rester au PREMIER niveau —
+          //  MapLibre refuse un « interpolate » imbriqué dans un « case ».)
           { id: 'dept-line', type: 'line', source: 'depts',
             paint: {
-              'line-color': ['case', ['boolean', ['feature-state', 'conquis'], false],
-                '#C9A227', '#7A6A52'],
-              'line-width': ['case', ['boolean', ['feature-state', 'conquis'], false],
-                2, ['interpolate', ['linear'], ['zoom'], 5, 0.5, 9, 1.1]],
-              'line-opacity': ['case', ['boolean', ['feature-state', 'conquis'], false],
-                0.95, ['interpolate', ['linear'], ['zoom'], 5, 0.32, 9, 0.7]],
+              'line-color': '#7A6A52',
               'line-dasharray': [3, 2],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.5, 9, 1.1],
+              'line-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.32, 9, 0.7],
+            } },
+          // Contrées conquises : trait d'or plein, par-dessus le pointillé
+          { id: 'dept-line-or', type: 'line', source: 'depts',
+            paint: {
+              'line-color': '#C9A227',
+              'line-width': 2,
+              'line-opacity': ['case', ['boolean', ['feature-state', 'conquis'], false],
+                0.95, 0],
             } },
 
           // ── Tes tracés ────────────────────────────────────────
@@ -230,7 +238,15 @@
     });
     map.touchZoomRotate.disableRotation();
 
+    // Une erreur de style ne doit jamais laisser l'écran d'ouverture
+    // tourner dans le vide : on la montre.
+    map.on('error', (e) => {
+      const m = e && e.error && e.error.message ? e.error.message : 'erreur de carte';
+      console.error('MapLibre :', m);
+    });
+
     map.on('load', async () => {
+      try {
       const acts = await loadState();
       map.getSource('traces').setData(tracesGeoJSON(acts));
 
@@ -272,6 +288,12 @@
         if (!(await window.TI.Cine.dejaVue())) await window.TI.Cine.jouer();
         await checkFaits();
         runPoiScan(); // après le récit, jamais pendant
+      }
+      } catch (err) {
+        console.error(err);
+        UI.hideLoading();
+        UI.toast('La carte s\u2019est chargée avec un incident : ' +
+          (err && err.message ? err.message : 'erreur inconnue'), 9000);
       }
     });
 
